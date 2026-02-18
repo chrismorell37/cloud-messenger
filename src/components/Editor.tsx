@@ -5,8 +5,10 @@ import Image from '@tiptap/extension-image'
 import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
 import type { JSONContent } from '@tiptap/react'
-import { Video, Audio } from '../lib/extensions'
+import { Video, Audio, SpotifyEmbed } from '../lib/extensions'
 import { compressVideoIfNeeded, isVideoFile, getFileSizeMB, MAX_SIZE_MB } from '../lib/videoCompression'
+import { searchSongs, getSpotifyUrl, extractSpotifyUrl, type SongResult } from '../lib/musicSearch'
+import { useDebouncedCallback } from 'use-debounce'
 import { useAutosave } from '../hooks/useAutosave'
 import { useSupabaseRealtime, useMediaUpload } from '../hooks/useSupabase'
 import { usePresence } from '../hooks/usePresence'
@@ -20,6 +22,11 @@ export default function Editor() {
   const [showMediaMenu, setShowMediaMenu] = useState(false)
   const [isCompressing, setIsCompressing] = useState(false)
   const [compressionProgress, setCompressionProgress] = useState(0)
+  const [showSongSearch, setShowSongSearch] = useState(false)
+  const [songSearchQuery, setSongSearchQuery] = useState('')
+  const [songSearchResults, setSongSearchResults] = useState<SongResult[]>([])
+  const [isSearchingSongs, setIsSearchingSongs] = useState(false)
+  const [isLoadingSpotify, setIsLoadingSpotify] = useState(false)
   const { isSaving, hasUnsavedChanges, lastSavedAt, otherUserPresence } = useEditorStore()
   const { triggerSave, forceSave } = useAutosave()
   const { uploadMedia } = useMediaUpload()
@@ -76,6 +83,7 @@ export default function Editor() {
       }),
       Video,
       Audio,
+      SpotifyEmbed,
       Placeholder.configure({
         placeholder: 'Start typing your message...',
       }),
@@ -96,6 +104,15 @@ export default function Editor() {
         if (files?.length) {
           handleFileDrop(files)
           return true
+        }
+        // Check for Spotify URL in pasted text
+        const text = event.clipboardData?.getData('text/plain')
+        if (text) {
+          const spotifyUrl = extractSpotifyUrl(text)
+          if (spotifyUrl) {
+            handleSpotifyUrlPaste(spotifyUrl)
+            return true
+          }
         }
         return false
       },
@@ -161,6 +178,63 @@ export default function Editor() {
       }
     }
   }, [editor, uploadMedia])
+
+  // Handle Spotify URL paste - auto-embed
+  const handleSpotifyUrlPaste = useCallback((spotifyUrl: string) => {
+    if (!editor) return
+    editor.chain().focus().setSpotifyEmbed({ spotifyUri: spotifyUrl }).run()
+  }, [editor])
+
+  // Handle song search (debounced)
+  const debouncedSearch = useDebouncedCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSongSearchResults([])
+      setIsSearchingSongs(false)
+      return
+    }
+    setIsSearchingSongs(true)
+    try {
+      const results = await searchSongs(query)
+      setSongSearchResults(results)
+    } catch (err) {
+      console.error('Song search error:', err)
+    } finally {
+      setIsSearchingSongs(false)
+    }
+  }, 300)
+
+  const handleSongSearch = useCallback((query: string) => {
+    setSongSearchQuery(query)
+    if (!query.trim()) {
+      setSongSearchResults([])
+      setIsSearchingSongs(false)
+      return
+    }
+    setIsSearchingSongs(true)
+    debouncedSearch(query)
+  }, [debouncedSearch])
+
+  // Handle song selection - get Spotify URL and embed
+  const handleSongSelect = useCallback(async (song: SongResult) => {
+    if (!editor) return
+    setIsLoadingSpotify(true)
+    try {
+      const result = await getSpotifyUrl(song.trackViewUrl)
+      if (result.spotifyUrl) {
+        editor.chain().focus().setSpotifyEmbed({ spotifyUri: result.spotifyUrl }).run()
+        setShowSongSearch(false)
+        setSongSearchQuery('')
+        setSongSearchResults([])
+      } else {
+        alert('Could not find this song on Spotify. Try a different track.')
+      }
+    } catch (err) {
+      console.error('Error getting Spotify URL:', err)
+      alert('Failed to get Spotify link. Please try again.')
+    } finally {
+      setIsLoadingSpotify(false)
+    }
+  }, [editor])
 
   // Handle file selection from file input
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -451,6 +525,102 @@ export default function Editor() {
         </div>
       )}
 
+      {/* Song search modal */}
+      {showSongSearch && (
+        <div className="fixed inset-0 z-50 bg-dark-bg/90 flex items-start justify-center pt-20 px-4">
+          <div className="bg-dark-surface border border-dark-border rounded-xl shadow-xl w-full max-w-md">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-dark-border">
+              <h3 className="text-lg font-semibold text-dark-text flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M8 12a4 4 0 0 0 8 0"/>
+                  <circle cx="12" cy="12" r="2"/>
+                </svg>
+                Add Song
+              </h3>
+              <button
+                onClick={() => {
+                  setShowSongSearch(false)
+                  setSongSearchQuery('')
+                  setSongSearchResults([])
+                }}
+                className="p-1 hover:bg-dark-border rounded-lg transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-dark-muted">
+                  <path d="M18 6 6 18"/>
+                  <path d="m6 6 12 12"/>
+                </svg>
+              </button>
+            </div>
+
+            {/* Search input */}
+            <div className="p-4">
+              <div className="relative">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted">
+                  <circle cx="11" cy="11" r="8"/>
+                  <path d="m21 21-4.3-4.3"/>
+                </svg>
+                <input
+                  type="text"
+                  value={songSearchQuery}
+                  onChange={(e) => handleSongSearch(e.target.value)}
+                  placeholder="Search for a song..."
+                  className="w-full pl-10 pr-4 py-3 bg-dark-bg border border-dark-border rounded-lg 
+                           text-dark-text placeholder:text-dark-muted focus:outline-none 
+                           focus:border-dark-accent transition-colors"
+                  autoFocus
+                />
+                {isSearchingSongs && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="w-4 h-4 border-2 border-dark-muted border-t-dark-accent rounded-full animate-spin" />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Results */}
+            <div className="max-h-80 overflow-y-auto">
+              {songSearchResults.length === 0 && songSearchQuery && !isSearchingSongs && (
+                <div className="p-4 text-center text-dark-muted">
+                  No songs found. Try a different search.
+                </div>
+              )}
+              {songSearchResults.map((song) => (
+                <button
+                  key={song.trackId}
+                  onClick={() => handleSongSelect(song)}
+                  disabled={isLoadingSpotify}
+                  className="w-full p-3 flex items-center gap-3 hover:bg-dark-border/50 
+                           transition-colors text-left disabled:opacity-50 disabled:cursor-wait"
+                >
+                  <img
+                    src={song.artworkUrl100}
+                    alt={song.collectionName}
+                    className="w-12 h-12 rounded-md object-cover flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-dark-text font-medium truncate">{song.trackName}</p>
+                    <p className="text-sm text-dark-muted truncate">{song.artistName}</p>
+                    <p className="text-xs text-dark-muted/70 truncate">{song.collectionName}</p>
+                  </div>
+                  {isLoadingSpotify && (
+                    <div className="w-5 h-5 border-2 border-dark-muted border-t-green-500 rounded-full animate-spin" />
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Footer hint */}
+            <div className="p-3 border-t border-dark-border">
+              <p className="text-xs text-dark-muted text-center">
+                You can also paste a Spotify link directly in the note
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Media menu backdrop */}
       {showMediaMenu && (
         <div 
@@ -563,6 +733,21 @@ export default function Editor() {
                 <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
               </svg>
               <span className="text-dark-text">Files</span>
+            </button>
+            <div className="border-t border-dark-border" />
+            <button
+              onClick={() => {
+                setShowSongSearch(true)
+                setShowMediaMenu(false)
+              }}
+              className="w-full px-4 py-3 flex items-center gap-3 hover:bg-dark-border/50 transition-colors text-left"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M8 12a4 4 0 0 0 8 0"/>
+                <circle cx="12" cy="12" r="2"/>
+              </svg>
+              <span className="text-dark-text">Add Song</span>
             </button>
           </div>
         )}

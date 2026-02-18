@@ -125,6 +125,82 @@ export const Audio = Node.create({
   },
 })
 
+// Custom Spotify Embed extension for TipTap
+export const SpotifyEmbed = Node.create({
+  name: 'spotifyEmbed',
+  group: 'block',
+  atom: true,
+  draggable: true,
+
+  addAttributes() {
+    return {
+      spotifyUri: {
+        default: null,
+      },
+    }
+  },
+
+  parseHTML() {
+    return [
+      {
+        tag: 'div[data-spotify-embed]',
+      },
+    ]
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    const spotifyUri = HTMLAttributes.spotifyUri || ''
+    // Convert spotify URI or URL to embed URL
+    // Handles: spotify:track:xxx, https://open.spotify.com/track/xxx
+    let embedUrl = ''
+    if (spotifyUri.startsWith('spotify:')) {
+      // Convert URI format: spotify:track:xxx -> https://open.spotify.com/embed/track/xxx
+      const parts = spotifyUri.split(':')
+      if (parts.length >= 3) {
+        embedUrl = `https://open.spotify.com/embed/${parts[1]}/${parts[2]}`
+      }
+    } else if (spotifyUri.includes('open.spotify.com')) {
+      // Convert URL format: https://open.spotify.com/track/xxx -> embed version
+      embedUrl = spotifyUri.replace('open.spotify.com/', 'open.spotify.com/embed/')
+      // Remove any query params
+      embedUrl = embedUrl.split('?')[0]
+    }
+
+    return [
+      'div',
+      mergeAttributes(HTMLAttributes, {
+        'data-spotify-embed': 'true',
+        style: 'width: 100%; margin: 1rem 0;',
+      }),
+      [
+        'iframe',
+        {
+          src: embedUrl,
+          width: '100%',
+          height: '80',
+          frameBorder: '0',
+          allow: 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture',
+          loading: 'lazy',
+          style: 'border-radius: 12px;',
+        },
+      ],
+    ]
+  },
+
+  addCommands() {
+    return {
+      setSpotifyEmbed:
+        (options: { spotifyUri: string }) =>
+        ({ commands }) => {
+          return commands.insertContent({
+            type: this.name,
+            attrs: options,
+          })
+        },
+    }
+  },
+})
+
 // Type declarations for custom commands
 declare module '@tiptap/react' {
   interface Commands<ReturnType> {
@@ -133,6 +209,9 @@ declare module '@tiptap/react' {
     }
     audio: {
       setAudio: (options: { src: string }) => ReturnType
+    }
+    spotifyEmbed: {
+      setSpotifyEmbed: (options: { spotifyUri: string }) => ReturnType
     }
   }
 }
