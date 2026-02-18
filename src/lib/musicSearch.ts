@@ -44,7 +44,7 @@ export async function searchSongs(query: string): Promise<SongResult[]> {
 }
 
 /**
- * Get Spotify URL from any music service URL using Odesli/Songlink API (free, no auth required)
+ * Get Spotify URL from any music service URL using our API proxy (avoids CORS issues)
  */
 export async function getSpotifyUrl(
   musicUrl: string
@@ -54,29 +54,21 @@ export async function getSpotifyUrl(
       url: musicUrl,
     })
 
-    const response = await fetch(
-      `https://api.song.link/v1-alpha.1/links?${params.toString()}`
-    )
+    // Use our serverless function to proxy the request (avoids CORS)
+    const response = await fetch(`/api/spotify-link?${params.toString()}`)
 
     if (!response.ok) {
-      console.error('Odesli API error:', response.status, response.statusText)
-      throw new Error('Odesli API request failed')
+      console.error('Spotify link API error:', response.status, response.statusText)
+      throw new Error('Spotify link API request failed')
     }
 
     const data = await response.json()
-    console.log('Odesli response:', data)
+    console.log('Spotify link response:', data)
 
-    // Extract Spotify link from response
-    const spotifyLink = data.linksByPlatform?.spotify
-    if (spotifyLink) {
-      return {
-        spotifyUrl: spotifyLink.url,
-        spotifyUri: spotifyLink.nativeAppUriDesktop || null,
-      }
+    return {
+      spotifyUrl: data.spotifyUrl || null,
+      spotifyUri: data.spotifyUri || null,
     }
-
-    console.log('No Spotify link found in Odesli response')
-    return { spotifyUrl: null, spotifyUri: null }
   } catch (error) {
     console.error('Error getting Spotify URL:', error)
     return { spotifyUrl: null, spotifyUri: null }
