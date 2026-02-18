@@ -7,7 +7,7 @@ import Placeholder from '@tiptap/extension-placeholder'
 import type { JSONContent } from '@tiptap/react'
 import { Video, Audio, SpotifyEmbed } from '../lib/extensions'
 import { compressVideoIfNeeded, isVideoFile, getFileSizeMB, MAX_SIZE_MB } from '../lib/videoCompression'
-import { searchSongs, getSpotifyUrl, extractSpotifyUrl, type SongResult } from '../lib/musicSearch'
+import { searchSongs, getSpotifyUrl, extractSpotifyUrl, buildSpotifySearchUrl, type SongResult } from '../lib/musicSearch'
 import { useDebouncedCallback } from 'use-debounce'
 import { useAutosave } from '../hooks/useAutosave'
 import { useSupabaseRealtime, useMediaUpload } from '../hooks/useSupabase'
@@ -226,7 +226,15 @@ export default function Editor() {
         setSongSearchQuery('')
         setSongSearchResults([])
       } else {
-        alert('Could not find this song on Spotify. Try a different track.')
+        // Fallback: Open Spotify search and let user paste the link
+        const searchUrl = buildSpotifySearchUrl(song.trackName, song.artistName)
+        const confirmed = confirm(
+          `Couldn't auto-link this song. Would you like to open Spotify to find it?\n\n` +
+          `After finding the song on Spotify, tap Share → Copy Link, then paste it in your note.`
+        )
+        if (confirmed) {
+          window.open(searchUrl, '_blank')
+        }
       }
     } catch (err) {
       console.error('Error getting Spotify URL:', err)

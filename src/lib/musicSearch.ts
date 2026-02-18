@@ -59,10 +59,12 @@ export async function getSpotifyUrl(
     )
 
     if (!response.ok) {
+      console.error('Odesli API error:', response.status, response.statusText)
       throw new Error('Odesli API request failed')
     }
 
     const data = await response.json()
+    console.log('Odesli response:', data)
 
     // Extract Spotify link from response
     const spotifyLink = data.linksByPlatform?.spotify
@@ -73,11 +75,22 @@ export async function getSpotifyUrl(
       }
     }
 
+    console.log('No Spotify link found in Odesli response')
     return { spotifyUrl: null, spotifyUri: null }
   } catch (error) {
     console.error('Error getting Spotify URL:', error)
     return { spotifyUrl: null, spotifyUri: null }
   }
+}
+
+/**
+ * Search Spotify directly using track name and artist
+ * This is a fallback when Odesli doesn't have the link
+ * Returns a Spotify search URL that will find the track
+ */
+export function buildSpotifySearchUrl(trackName: string, artistName: string): string {
+  const query = encodeURIComponent(`${trackName} ${artistName}`)
+  return `https://open.spotify.com/search/${query}`
 }
 
 /**
