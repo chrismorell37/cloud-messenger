@@ -1,0 +1,623 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEditor, EditorContent } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import Image from '@tiptap/extension-image'
+import Link from '@tiptap/extension-link'
+import Placeholder from '@tiptap/extension-placeholder'
+import type { JSONContent } from '@tiptap/react'
+import { Video, Audio } from '../lib/extensions'
+import { compressVideoIfNeeded, isVideoFile, getFileSizeMB, MAX_SIZE_MB } from '../lib/videoCompression'
+import { useAutosave } from '../hooks/useAutosave'
+import { useSupabaseRealtime, useMediaUpload } from '../hooks/useSupabase'
+import { usePresence } from '../hooks/usePresence'
+import { useEditorStore } from '../stores/editorStore'
+import PresenceCursors from './PresenceCursors'
+
+export default function Editor() {
+  const [isLoading, setIsLoading] = useState(true)
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordingDuration, setRecordingDuration] = useState(0)
+  const [showMediaMenu, setShowMediaMenu] = useState(false)
+  const [isCompressing, setIsCompressing] = useState(false)
+  const [compressionProgress, setCompressionProgress] = useState(0)
+  const { isSaving, hasUnsavedChanges, lastSavedAt, otherUserPresence } = useEditorStore()
+  const { triggerSave, forceSave } = useAutosave()
+  const { uploadMedia } = useMediaUpload()
+  const { updateCursor, clearCursor } = usePresence()
+  const editorContainerRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const filesInputRef = useRef<HTMLInputElement>(null)
+  const cameraPhotoInputRef = useRef<HTMLInputElement>(null)
+  const cameraVideoInputRef = useRef<HTMLInputElement>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const isRemoteUpdate = useRef(false)
+
+  // Handle content updates from other user
+  const handleRemoteContentChange = useCallback((content: JSONContent) => {
+    if (editor && !isRemoteUpdate.current) {
+      isRemoteUpdate.current = true
+      const { from, to } = editor.state.selection
+      editor.commands.setContent(content)
+      // Try to restore cursor position
+      try {
+        editor.commands.setTextSelection({ from, to })
+      } catch {
+        // Position may be invalid after content change
+      }
+      setTimeout(() => {
+        isRemoteUpdate.current = false
+      }, 100)
+    }
+  }, [])
+
+  const { loadContent, markLocalUpdate } = useSupabaseRealtime(handleRemoteContentChange)
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Image.configure({
+        allowBase64: true,
+        inline: false,
+        HTMLAttributes: {
+          class: 'w-full h-auto rounded-lg',
+        },
+      }),
+      Link.configure({
+        autolink: true,
+        openOnClick: true,
+        linkOnPaste: true,
+        HTMLAttributes: {
+          class: 'text-blue-400 hover:text-blue-300 underline',
+          target: '_blank',
+          rel: 'noopener noreferrer',
+        },
+      }),
+      Video,
+      Audio,
+      Placeholder.configure({
+        placeholder: 'Start typing your message...',
+      }),
+    ],
+    editorProps: {
+      attributes: {
+        class: 'tiptap focus:outline-none',
+      },
+      handleDrop: (view, event, _slice, moved) => {
+        if (!moved && event.dataTransfer?.files?.length) {
+          handleFileDrop(event.dataTransfer.files, view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos || 0)
+          return true
+        }
+        return false
+      },
+      handlePaste: (_view, event) => {
+        const files = event.clipboardData?.files
+        if (files?.length) {
+          handleFileDrop(files)
+          return true
+        }
+        return false
+      },
+    },
+    onUpdate: ({ editor }) => {
+      if (!isRemoteUpdate.current) {
+        markLocalUpdate()
+        triggerSave(editor.getJSON(), editor.getHTML())
+      }
+    },
+  })
+
+  // Handle file drop/paste for images, videos, and audio
+  const handleFileDrop = useCallback(async (files: FileList, pos?: number) => {
+    if (!editor) return
+
+    for (let file of Array.from(files)) {
+      const isImage = file.type.startsWith('image/')
+      const isVideo = file.type.startsWith('video/')
+      const isAudio = file.type.startsWith('audio/')
+
+      if (!isImage && !isVideo && !isAudio) continue
+
+      // Compress video if needed (over 75MB)
+      if (isVideo && isVideoFile(file) && getFileSizeMB(file) > MAX_SIZE_MB) {
+        setIsCompressing(true)
+        setCompressionProgress(0)
+        try {
+          file = await compressVideoIfNeeded(file, (progress) => {
+            setCompressionProgress(progress)
+          })
+        } catch (err) {
+          console.error('Compression error:', err)
+        } finally {
+          setIsCompressing(false)
+          setCompressionProgress(0)
+        }
+      }
+
+      // Show loading state with placeholder
+      let placeholder = '[Uploading...]'
+      if (isImage) placeholder = '![Uploading...]()'
+      else if (isVideo) placeholder = '[Uploading video...]'
+      else if (isAudio) placeholder = '[Uploading audio...]'
+
+      // Insert placeholder
+      if (pos !== undefined) {
+        editor.chain().focus().insertContentAt(pos, placeholder).run()
+      }
+
+      // Upload to Supabase Storage
+      const url = await uploadMedia(file)
+
+      if (url) {
+        // Remove placeholder and insert actual media
+        if (isImage) {
+          editor.chain().focus().setImage({ src: url }).run()
+        } else if (isVideo) {
+          editor.chain().focus().setVideo({ src: url }).run()
+        } else if (isAudio) {
+          editor.chain().focus().setAudio({ src: url }).run()
+        }
+      }
+    }
+  }, [editor, uploadMedia])
+
+  // Handle file selection from file input
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (files?.length) {
+      handleFileDrop(files)
+    }
+    // Reset input so the same file can be selected again
+    e.target.value = ''
+  }, [handleFileDrop])
+
+  // Load initial content
+  useEffect(() => {
+    const init = async () => {
+      const content = await loadContent()
+      if (content && editor) {
+        editor.commands.setContent(content)
+      }
+      setIsLoading(false)
+    }
+
+    if (editor) {
+      init()
+    }
+  }, [editor, loadContent])
+
+  // Save before page unload
+  useEffect(() => {
+    const handleBeforeUnload = async (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges && editor) {
+        e.preventDefault()
+        await forceSave(editor.getJSON(), editor.getHTML())
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedChanges, editor, forceSave])
+
+  // Handle cursor tracking
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (editorContainerRef.current) {
+      const rect = editorContainerRef.current.getBoundingClientRect()
+      updateCursor(e.clientX - rect.left, e.clientY - rect.top)
+    }
+  }, [updateCursor])
+
+  // Manual save handler
+  const handleManualSave = useCallback(() => {
+    if (editor && hasUnsavedChanges && !isSaving) {
+      forceSave(editor.getJSON(), editor.getHTML())
+    }
+  }, [editor, hasUnsavedChanges, isSaving, forceSave])
+
+  // Voice recording functions
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      
+      // Use audio/webm for better compatibility, fallback to audio/mp4 for Safari
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm') 
+        ? 'audio/webm' 
+        : 'audio/mp4'
+      
+      const mediaRecorder = new MediaRecorder(stream, { mimeType })
+      mediaRecorderRef.current = mediaRecorder
+      audioChunksRef.current = []
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data)
+        }
+      }
+
+      mediaRecorder.onstop = async () => {
+        // Stop all tracks
+        stream.getTracks().forEach(track => track.stop())
+        
+        // Clear timer
+        if (recordingTimerRef.current) {
+          clearInterval(recordingTimerRef.current)
+          recordingTimerRef.current = null
+        }
+        setRecordingDuration(0)
+
+        // Create audio blob and upload
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType })
+        const extension = mimeType === 'audio/webm' ? 'webm' : 'm4a'
+        const audioFile = new File([audioBlob], `voice-note-${Date.now()}.${extension}`, { type: mimeType })
+        
+        // Upload and insert
+        const url = await uploadMedia(audioFile)
+        if (url && editor) {
+          editor.chain().focus().setAudio({ src: url }).run()
+        }
+      }
+
+      mediaRecorder.start()
+      setIsRecording(true)
+      setRecordingDuration(0)
+      
+      // Start duration timer
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current)
+      }
+      const startTime = Date.now()
+      recordingTimerRef.current = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000)
+        setRecordingDuration(elapsed)
+      }, 100) // Update more frequently for smoother display
+      
+    } catch (err) {
+      console.error('Error starting recording:', err)
+      alert('Could not access microphone. Please allow microphone access.')
+    }
+  }, [editor, uploadMedia])
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop()
+    }
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current)
+      recordingTimerRef.current = null
+    }
+    setIsRecording(false)
+  }, [])
+
+  const toggleRecording = useCallback(() => {
+    if (isRecording) {
+      stopRecording()
+    } else {
+      startRecording()
+    }
+  }, [isRecording, startRecording, stopRecording])
+
+  // Cleanup recording on unmount only
+  useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current)
+      }
+    }
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex items-center gap-3 text-dark-muted">
+          <div className="w-5 h-5 border-2 border-dark-muted border-t-dark-accent rounded-full animate-spin" />
+          <span>Loading document...</span>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative">
+      {/* Status bar */}
+      <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-2 bg-dark-surface/80 backdrop-blur-sm border-b border-dark-border">
+        <div className="flex items-center gap-4">
+          {otherUserPresence && (
+            <div className="flex items-center gap-2 text-sm">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <span className="text-dark-muted">
+                {otherUserPresence.email.split('@')[0]} is here
+              </span>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-3 text-sm text-dark-muted">
+          {isSaving && (
+            <span className="flex items-center gap-2">
+              <div className="w-3 h-3 border border-dark-muted border-t-dark-accent rounded-full animate-spin" />
+              Saving...
+            </span>
+          )}
+          {!isSaving && hasUnsavedChanges && (
+            <button
+              onClick={handleManualSave}
+              className="flex items-center gap-2 px-3 py-1 bg-dark-accent/20 hover:bg-dark-accent/30 
+                       text-dark-accent rounded-md transition-colors"
+            >
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width="14" 
+                height="14" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              >
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                <polyline points="17 21 17 13 7 13 7 21" />
+                <polyline points="7 3 7 8 15 8" />
+              </svg>
+              Save
+            </button>
+          )}
+          {!isSaving && !hasUnsavedChanges && lastSavedAt && (
+            <span className="text-green-500/70">Saved {formatTimeAgo(lastSavedAt)}</span>
+          )}
+        </div>
+      </div>
+
+      {/* Editor container */}
+      <div 
+        ref={editorContainerRef}
+        className="relative min-h-[calc(100vh-8rem)]"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={clearCursor}
+      >
+        {/* Other user's cursor */}
+        {otherUserPresence?.cursor && (
+          <PresenceCursors 
+            cursor={otherUserPresence.cursor} 
+            email={otherUserPresence.email} 
+          />
+        )}
+
+        <EditorContent 
+          editor={editor} 
+          className="prose prose-invert max-w-none"
+        />
+      </div>
+
+      {/* Hidden file inputs */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,video/*,audio/*"
+        multiple
+        className="hidden"
+        onChange={handleFileSelect}
+      />
+      <input
+        ref={filesInputRef}
+        type="file"
+        accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.md"
+        multiple
+        className="hidden"
+        onChange={handleFileSelect}
+      />
+      <input
+        ref={cameraPhotoInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleFileSelect}
+      />
+      <input
+        ref={cameraVideoInputRef}
+        type="file"
+        accept="video/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleFileSelect}
+      />
+
+      {/* Compression progress overlay */}
+      {isCompressing && (
+        <div className="fixed inset-0 z-50 bg-dark-bg/90 flex items-center justify-center">
+          <div className="bg-dark-surface border border-dark-border rounded-xl p-6 shadow-xl max-w-sm w-full mx-4">
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-12 h-12 border-3 border-dark-border border-t-dark-accent rounded-full animate-spin" />
+              <div className="text-center">
+                <h3 className="text-lg font-semibold text-dark-text mb-1">
+                  Compressing Video
+                </h3>
+                <p className="text-sm text-dark-muted">
+                  Optimizing for faster upload...
+                </p>
+              </div>
+              <div className="w-full bg-dark-border rounded-full h-2 overflow-hidden">
+                <div 
+                  className="h-full bg-dark-accent transition-all duration-300 ease-out"
+                  style={{ width: `${compressionProgress}%` }}
+                />
+              </div>
+              <p className="text-sm text-dark-muted">
+                {compressionProgress}% complete
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Media menu backdrop */}
+      {showMediaMenu && (
+        <div 
+          className="fixed inset-0 z-20"
+          onClick={() => setShowMediaMenu(false)}
+        />
+      )}
+
+      {/* Floating buttons */}
+      <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-30">
+        {/* Voice recording button */}
+        <button
+          onClick={toggleRecording}
+          className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg 
+                     transition-all duration-200 hover:scale-105 active:scale-95
+                     ${isRecording 
+                       ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
+                       : 'bg-dark-surface hover:bg-dark-border border border-dark-border'}`}
+          aria-label={isRecording ? 'Stop recording' : 'Start voice note'}
+        >
+          {isRecording ? (
+            <div className="flex flex-col items-center">
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width="20" 
+                height="20" 
+                viewBox="0 0 24 24" 
+                fill="currentColor"
+                className="text-white"
+              >
+                <rect x="6" y="6" width="12" height="12" rx="2" />
+              </svg>
+              <span className="text-[10px] text-white font-medium mt-0.5">
+                {formatDuration(recordingDuration)}
+              </span>
+            </div>
+          ) : (
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              width="24" 
+              height="24" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              className="text-dark-text"
+            >
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+              <line x1="12" x2="12" y1="19" y2="22" />
+            </svg>
+          )}
+        </button>
+
+        {/* Media menu */}
+        {showMediaMenu && (
+          <div className="absolute bottom-16 right-0 bg-dark-surface border border-dark-border rounded-xl shadow-xl overflow-hidden min-w-[180px]">
+            <button
+              onClick={() => {
+                cameraPhotoInputRef.current?.click()
+                setShowMediaMenu(false)
+              }}
+              className="w-full px-4 py-3 flex items-center gap-3 hover:bg-dark-border/50 transition-colors text-left"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-dark-muted">
+                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+                <circle cx="12" cy="13" r="3"/>
+              </svg>
+              <span className="text-dark-text">Take Photo</span>
+            </button>
+            <button
+              onClick={() => {
+                cameraVideoInputRef.current?.click()
+                setShowMediaMenu(false)
+              }}
+              className="w-full px-4 py-3 flex items-center gap-3 hover:bg-dark-border/50 transition-colors text-left"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-dark-muted">
+                <path d="m22 8-6 4 6 4V8Z"/>
+                <rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
+              </svg>
+              <span className="text-dark-text">Take Video</span>
+            </button>
+            <div className="border-t border-dark-border" />
+            <button
+              onClick={() => {
+                fileInputRef.current?.click()
+                setShowMediaMenu(false)
+              }}
+              className="w-full px-4 py-3 flex items-center gap-3 hover:bg-dark-border/50 transition-colors text-left"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-dark-muted">
+                <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+                <circle cx="9" cy="9" r="2"/>
+                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+              </svg>
+              <span className="text-dark-text">Photo Library</span>
+            </button>
+            <button
+              onClick={() => {
+                filesInputRef.current?.click()
+                setShowMediaMenu(false)
+              }}
+              className="w-full px-4 py-3 flex items-center gap-3 hover:bg-dark-border/50 transition-colors text-left"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-dark-muted">
+                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/>
+                <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
+              </svg>
+              <span className="text-dark-text">Files</span>
+            </button>
+          </div>
+        )}
+
+        {/* Add media button */}
+        <button
+          onClick={() => setShowMediaMenu(!showMediaMenu)}
+          disabled={isRecording}
+          className={`w-14 h-14 bg-dark-accent hover:bg-dark-accent-hover 
+                     rounded-full flex items-center justify-center shadow-lg 
+                     transition-all duration-200 hover:scale-105 active:scale-95
+                     disabled:opacity-50 disabled:cursor-not-allowed
+                     ${showMediaMenu ? 'rotate-45' : ''}`}
+          aria-label="Add photo, video, or audio"
+        >
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            width="24" 
+            height="24" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2.5" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+            className="text-white transition-transform duration-200"
+          >
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Helper function to format time ago
+function formatTimeAgo(date: Date): string {
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000)
+  
+  if (seconds < 5) return 'just now'
+  if (seconds < 60) return `${seconds}s ago`
+  
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  
+  return date.toLocaleDateString()
+}
+
+// Helper function to format recording duration
+function formatDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  return `${mins}:${secs.toString().padStart(2, '0')}`
+}
