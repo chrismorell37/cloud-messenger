@@ -14,7 +14,7 @@ export interface SpotifyLinkResult {
 }
 
 /**
- * Search for songs using iTunes Search API (free, no auth required)
+ * Search for songs using our API proxy (works in WebViews like Instagram)
  */
 export async function searchSongs(query: string): Promise<SongResult[]> {
   if (!query.trim()) return []
@@ -22,14 +22,10 @@ export async function searchSongs(query: string): Promise<SongResult[]> {
   try {
     const params = new URLSearchParams({
       term: query,
-      media: 'music',
-      entity: 'song',
-      limit: '10',
     })
 
-    const response = await fetch(
-      `https://itunes.apple.com/search?${params.toString()}`
-    )
+    // Use our serverless proxy to avoid CORS/WebView issues
+    const response = await fetch(`/api/itunes-search?${params.toString()}`)
 
     if (!response.ok) {
       throw new Error('iTunes search failed')
@@ -44,7 +40,8 @@ export async function searchSongs(query: string): Promise<SongResult[]> {
 }
 
 /**
- * Get Spotify URL from any music service URL using our API proxy (avoids CORS issues)
+ * Get Spotify URL from any music service URL
+ * Uses /api/spotify-link which is proxied in dev and serverless in production
  */
 export async function getSpotifyUrl(
   musicUrl: string
@@ -54,7 +51,6 @@ export async function getSpotifyUrl(
       url: musicUrl,
     })
 
-    // Use our serverless function to proxy the request (avoids CORS)
     const response = await fetch(`/api/spotify-link?${params.toString()}`)
 
     if (!response.ok) {
@@ -64,6 +60,17 @@ export async function getSpotifyUrl(
 
     const data = await response.json()
     console.log('Spotify link response:', data)
+
+    // Handle both response formats:
+    // - Dev proxy returns full Odesli response (linksByPlatform.spotify)
+    // - Production serverless returns simplified (spotifyUrl, spotifyUri)
+    if (data.linksByPlatform?.spotify) {
+      const spotifyLink = data.linksByPlatform.spotify
+      return {
+        spotifyUrl: spotifyLink.url || null,
+        spotifyUri: spotifyLink.nativeAppUriDesktop || null,
+      }
+    }
 
     return {
       spotifyUrl: data.spotifyUrl || null,
