@@ -30,6 +30,7 @@ export default function Editor() {
   const [isLoadingSpotify, setIsLoadingSpotify] = useState(false)
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
+  const [keyboardHeight, setKeyboardHeight] = useState(0)
   const { isSaving, hasUnsavedChanges, lastSavedAt, otherUserPresence } = useEditorStore()
   const { triggerSave, forceSave } = useAutosave()
   const { uploadMedia } = useMediaUpload()
@@ -392,6 +393,27 @@ export default function Editor() {
     }
   }, [])
 
+  // Detect keyboard visibility using Visual Viewport API (for iOS)
+  useEffect(() => {
+    const viewport = window.visualViewport
+    if (!viewport) return
+
+    const handleResize = () => {
+      // Calculate keyboard height as difference between window height and viewport height
+      const keyboardH = window.innerHeight - viewport.height
+      setKeyboardHeight(Math.max(0, keyboardH))
+    }
+
+    viewport.addEventListener('resize', handleResize)
+    viewport.addEventListener('scroll', handleResize)
+    handleResize()
+
+    return () => {
+      viewport.removeEventListener('resize', handleResize)
+      viewport.removeEventListener('scroll', handleResize)
+    }
+  }, [])
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -417,7 +439,35 @@ export default function Editor() {
             </div>
           )}
         </div>
-        <div className="flex items-center gap-3 text-sm text-dark-muted">
+        <div className="flex items-center gap-2 text-sm text-dark-muted">
+          {/* Undo/Redo buttons */}
+          <button
+            onClick={() => editor?.chain().focus().undo().run()}
+            disabled={!editor?.can().undo()}
+            className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-dark-border 
+                     disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            aria-label="Undo"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m9 14-4-4 4-4"/>
+              <path d="M5 10h11a4 4 0 0 1 0 8h-1"/>
+            </svg>
+          </button>
+          <button
+            onClick={() => editor?.chain().focus().redo().run()}
+            disabled={!editor?.can().redo()}
+            className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-dark-border 
+                     disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            aria-label="Redo"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m15 14 4-4-4-4"/>
+              <path d="M19 10H8a4 4 0 0 0 0 8h1"/>
+            </svg>
+          </button>
+
+          <div className="w-px h-5 bg-dark-border mx-1" />
+
           {isSaving && (
             <span className="flex items-center gap-2">
               <div className="w-3 h-3 border border-dark-muted border-t-dark-accent rounded-full animate-spin" />
@@ -449,7 +499,7 @@ export default function Editor() {
             </button>
           )}
           {!isSaving && !hasUnsavedChanges && lastSavedAt && (
-            <span className="text-green-500/70">Saved {formatTimeAgo(lastSavedAt)}</span>
+            <span className="text-green-600">Saved {formatTimeAgo(lastSavedAt)}</span>
           )}
         </div>
       </div>
@@ -642,7 +692,10 @@ export default function Editor() {
       )}
 
       {/* Floating buttons */}
-      <div className="fixed bottom-14 right-6 flex flex-col gap-3 z-30">
+      <div 
+        className="fixed right-6 flex flex-col gap-3 z-30"
+        style={{ bottom: keyboardHeight + 56 }}
+      >
         {/* Voice recording button */}
         <button
           onClick={toggleRecording}
@@ -794,7 +847,10 @@ export default function Editor() {
       </div>
 
       {/* Text formatting toolbar */}
-      <div className="fixed bottom-0 left-0 right-0 h-11 bg-dark-surface border-t border-dark-border flex items-center justify-center gap-1 px-4 z-20">
+      <div 
+        className="fixed left-0 right-0 h-11 bg-dark-surface border-t border-dark-border flex items-center justify-center gap-1 px-4 z-20"
+        style={{ bottom: keyboardHeight }}
+      >
         <button
           onClick={() => editor?.chain().focus().toggleBold().run()}
           className={`w-10 h-9 rounded-md flex items-center justify-center transition-colors
