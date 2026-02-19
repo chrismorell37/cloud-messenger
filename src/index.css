@@ -1,11 +1,11 @@
 @import "tailwindcss";
 
-/* Custom dark mode theme */
+/* Custom light mode theme */
 @theme {
-  --color-dark-bg: #0d0d0d;
-  --color-dark-surface: #1a1a1a;
-  --color-dark-border: #2a2a2a;
-  --color-dark-text: #e5e5e5;
+  --color-dark-bg: #ffffff;
+  --color-dark-surface: #f5f5f5;
+  --color-dark-border: #e5e5e5;
+  --color-dark-text: #171717;
   --color-dark-muted: #737373;
   --color-dark-accent: #3b82f6;
   --color-dark-accent-hover: #2563eb;
@@ -13,7 +13,7 @@
 
 /* Base styles */
 html {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
@@ -121,7 +121,7 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-dark-bg;
+  @apply bg-dark-surface;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -130,5 +130,5 @@ body {
 
 /* Selection styling */
 ::selection {
-  @apply bg-dark-accent/30;
+  @apply bg-dark-accent/20;
 }
