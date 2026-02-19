@@ -789,8 +789,13 @@ export default function Editor() {
         </button>
       </div>
 
-      {/* Bottom bar for iOS keyboard visibility */}
-      <div className="fixed bottom-0 left-0 right-0 h-12 bg-dark-surface/90 border-t border-dark-border z-10 pointer-events-none" />
+      {/* Bottom gradient for iOS keyboard dismiss button visibility */}
+      <div 
+        className="fixed bottom-0 left-0 right-0 h-32 pointer-events-none z-10"
+        style={{
+          background: 'linear-gradient(to top, rgba(42, 42, 42, 0.95) 0%, rgba(42, 42, 42, 0.7) 40%, transparent 100%)'
+        }}
+      />
     </div>
   )
 }
