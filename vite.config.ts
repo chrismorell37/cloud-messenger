@@ -29,9 +29,11 @@ export default defineConfig({
       '/api/notify': {
         bypass: (_req, res) => {
           // No-op in development - just return success
-          res.statusCode = 200
-          res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify({ sent: false, reason: 'Dev mode - notifications disabled' }))
+          if (res) {
+            res.statusCode = 200
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({ sent: false, reason: 'Dev mode - notifications disabled' }))
+          }
           return false
         },
       },
