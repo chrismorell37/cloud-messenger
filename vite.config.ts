@@ -26,17 +26,6 @@ export default defineConfig({
           return `/search?term=${encodeURIComponent(term || '')}&media=music&entity=song&limit=10`
         },
       },
-      '/api/notify': {
-        bypass: (_req, res) => {
-          // No-op in development - just return success
-          if (res) {
-            res.statusCode = 200
-            res.setHeader('Content-Type', 'application/json')
-            res.end(JSON.stringify({ sent: false, reason: 'Dev mode - notifications disabled' }))
-          }
-          return false
-        },
-      },
     },
   },
 })
