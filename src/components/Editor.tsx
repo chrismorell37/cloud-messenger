@@ -399,12 +399,11 @@ export default function Editor() {
     if (!viewport) return
 
     const updatePosition = () => {
-      // Calculate the bottom position accounting for keyboard AND scroll offset
-      // This keeps the toolbar fixed relative to the visual viewport, not the layout viewport
-      const offsetTop = viewport.offsetTop
-      const keyboardHeight = window.innerHeight - viewport.height
-      // Position from bottom: keyboard height + any scroll offset correction
-      setToolbarBottom(Math.max(0, keyboardHeight) + offsetTop)
+      // Position toolbar at the bottom of the visual viewport
+      // This works by calculating the TOP position based on viewport
+      const toolbarHeight = 44 // h-11 = 44px
+      const top = viewport.offsetTop + viewport.height - toolbarHeight
+      setToolbarBottom(top)
     }
 
     viewport.addEventListener('resize', updatePosition)
@@ -697,7 +696,7 @@ export default function Editor() {
       {/* Floating buttons */}
       <div 
         className="fixed right-6 flex flex-col gap-3 z-30"
-        style={{ bottom: toolbarBottom + 56 }}
+        style={{ top: toolbarBottom - 140, bottom: 'auto' }}
       >
         {/* Voice recording button */}
         <button
@@ -852,7 +851,7 @@ export default function Editor() {
       {/* Text formatting toolbar */}
       <div 
         className="fixed left-0 right-0 h-11 bg-dark-surface border-t border-dark-border flex items-center justify-center gap-1 px-4 z-20"
-        style={{ bottom: toolbarBottom }}
+        style={{ top: toolbarBottom, bottom: 'auto' }}
       >
         <button
           onClick={() => editor?.chain().focus().toggleBold().run()}
