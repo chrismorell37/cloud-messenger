@@ -30,7 +30,7 @@ export default function Editor() {
   const [isLoadingSpotify, setIsLoadingSpotify] = useState(false)
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
-  const [keyboardHeight, setKeyboardHeight] = useState(0)
+  const [toolbarBottom, setToolbarBottom] = useState(0)
   const { isSaving, hasUnsavedChanges, lastSavedAt, otherUserPresence } = useEditorStore()
   const { triggerSave, forceSave } = useAutosave()
   const { uploadMedia } = useMediaUpload()
@@ -393,24 +393,27 @@ export default function Editor() {
     }
   }, [])
 
-  // Detect keyboard visibility using Visual Viewport API (for iOS)
+  // Detect keyboard visibility and position using Visual Viewport API (for iOS)
   useEffect(() => {
     const viewport = window.visualViewport
     if (!viewport) return
 
-    const handleResize = () => {
-      // Calculate keyboard height as difference between window height and viewport height
-      const keyboardH = window.innerHeight - viewport.height
-      setKeyboardHeight(Math.max(0, keyboardH))
+    const updatePosition = () => {
+      // Calculate the bottom position accounting for keyboard AND scroll offset
+      // This keeps the toolbar fixed relative to the visual viewport, not the layout viewport
+      const offsetTop = viewport.offsetTop
+      const keyboardHeight = window.innerHeight - viewport.height
+      // Position from bottom: keyboard height + any scroll offset correction
+      setToolbarBottom(Math.max(0, keyboardHeight) + offsetTop)
     }
 
-    viewport.addEventListener('resize', handleResize)
-    viewport.addEventListener('scroll', handleResize)
-    handleResize()
+    viewport.addEventListener('resize', updatePosition)
+    viewport.addEventListener('scroll', updatePosition)
+    updatePosition()
 
     return () => {
-      viewport.removeEventListener('resize', handleResize)
-      viewport.removeEventListener('scroll', handleResize)
+      viewport.removeEventListener('resize', updatePosition)
+      viewport.removeEventListener('scroll', updatePosition)
     }
   }, [])
 
@@ -694,7 +697,7 @@ export default function Editor() {
       {/* Floating buttons */}
       <div 
         className="fixed right-6 flex flex-col gap-3 z-30"
-        style={{ bottom: keyboardHeight + 56 }}
+        style={{ bottom: toolbarBottom + 56 }}
       >
         {/* Voice recording button */}
         <button
@@ -849,7 +852,7 @@ export default function Editor() {
       {/* Text formatting toolbar */}
       <div 
         className="fixed left-0 right-0 h-11 bg-dark-surface border-t border-dark-border flex items-center justify-center gap-1 px-4 z-20"
-        style={{ bottom: keyboardHeight }}
+        style={{ bottom: toolbarBottom }}
       >
         <button
           onClick={() => editor?.chain().focus().toggleBold().run()}
