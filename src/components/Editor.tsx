@@ -3,6 +3,7 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import Link from '@tiptap/extension-link'
+import Underline from '@tiptap/extension-underline'
 import Placeholder from '@tiptap/extension-placeholder'
 import type { JSONContent } from '@tiptap/react'
 import { Video, Audio, SpotifyEmbed } from '../lib/extensions'
@@ -27,6 +28,8 @@ export default function Editor() {
   const [songSearchResults, setSongSearchResults] = useState<SongResult[]>([])
   const [isSearchingSongs, setIsSearchingSongs] = useState(false)
   const [isLoadingSpotify, setIsLoadingSpotify] = useState(false)
+  const [showLinkModal, setShowLinkModal] = useState(false)
+  const [linkUrl, setLinkUrl] = useState('')
   const { isSaving, hasUnsavedChanges, lastSavedAt, otherUserPresence } = useEditorStore()
   const { triggerSave, forceSave } = useAutosave()
   const { uploadMedia } = useMediaUpload()
@@ -76,11 +79,12 @@ export default function Editor() {
         openOnClick: true,
         linkOnPaste: true,
         HTMLAttributes: {
-          class: 'text-blue-400 hover:text-blue-300 underline',
+          class: 'text-dark-accent hover:text-dark-accent-hover underline',
           target: '_blank',
           rel: 'noopener noreferrer',
         },
       }),
+      Underline,
       Video,
       Audio,
       SpotifyEmbed,
@@ -638,7 +642,7 @@ export default function Editor() {
       )}
 
       {/* Floating buttons */}
-      <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-30">
+      <div className="fixed bottom-14 right-6 flex flex-col gap-3 z-30">
         {/* Voice recording button */}
         <button
           onClick={toggleRecording}
@@ -789,6 +793,112 @@ export default function Editor() {
         </button>
       </div>
 
+      {/* Text formatting toolbar */}
+      <div className="fixed bottom-0 left-0 right-0 h-11 bg-dark-surface border-t border-dark-border flex items-center justify-center gap-1 px-4 z-20">
+        <button
+          onClick={() => editor?.chain().focus().toggleBold().run()}
+          className={`w-10 h-9 rounded-md flex items-center justify-center transition-colors
+                     ${editor?.isActive('bold') ? 'bg-dark-accent text-white' : 'text-dark-text hover:bg-dark-border'}`}
+          aria-label="Bold"
+        >
+          <span className="font-bold text-base">B</span>
+        </button>
+        <button
+          onClick={() => editor?.chain().focus().toggleItalic().run()}
+          className={`w-10 h-9 rounded-md flex items-center justify-center transition-colors
+                     ${editor?.isActive('italic') ? 'bg-dark-accent text-white' : 'text-dark-text hover:bg-dark-border'}`}
+          aria-label="Italic"
+        >
+          <span className="italic text-base">I</span>
+        </button>
+        <button
+          onClick={() => editor?.chain().focus().toggleUnderline().run()}
+          className={`w-10 h-9 rounded-md flex items-center justify-center transition-colors
+                     ${editor?.isActive('underline') ? 'bg-dark-accent text-white' : 'text-dark-text hover:bg-dark-border'}`}
+          aria-label="Underline"
+        >
+          <span className="underline text-base">U</span>
+        </button>
+        <button
+          onClick={() => {
+            if (editor?.isActive('link')) {
+              editor.chain().focus().unsetLink().run()
+            } else {
+              setLinkUrl('')
+              setShowLinkModal(true)
+            }
+          }}
+          className={`w-10 h-9 rounded-md flex items-center justify-center transition-colors
+                     ${editor?.isActive('link') ? 'bg-dark-accent text-white' : 'text-dark-text hover:bg-dark-border'}`}
+          aria-label="Link"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Link input modal */}
+      {showLinkModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-dark-surface border border-dark-border rounded-xl shadow-xl w-full max-w-sm">
+            <div className="p-4 border-b border-dark-border">
+              <h3 className="text-lg font-semibold text-dark-text">Add Link</h3>
+            </div>
+            <div className="p-4">
+              <input
+                type="url"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                placeholder="https://example.com"
+                className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg 
+                         text-dark-text placeholder:text-dark-muted focus:outline-none 
+                         focus:border-dark-accent transition-colors"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && linkUrl) {
+                    e.preventDefault()
+                    const url = linkUrl.startsWith('http') ? linkUrl : `https://${linkUrl}`
+                    editor?.chain().focus().setLink({ href: url }).run()
+                    setShowLinkModal(false)
+                    setLinkUrl('')
+                  } else if (e.key === 'Escape') {
+                    setShowLinkModal(false)
+                    setLinkUrl('')
+                  }
+                }}
+              />
+            </div>
+            <div className="p-4 border-t border-dark-border flex gap-2 justify-end">
+              <button
+                onClick={() => {
+                  setShowLinkModal(false)
+                  setLinkUrl('')
+                }}
+                className="px-4 py-2 text-dark-muted hover:text-dark-text transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (linkUrl) {
+                    const url = linkUrl.startsWith('http') ? linkUrl : `https://${linkUrl}`
+                    editor?.chain().focus().setLink({ href: url }).run()
+                    setShowLinkModal(false)
+                    setLinkUrl('')
+                  }
+                }}
+                disabled={!linkUrl}
+                className="px-4 py-2 bg-dark-accent hover:bg-dark-accent-hover text-white rounded-lg 
+                         disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Add Link
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
