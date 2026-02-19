@@ -788,6 +788,9 @@ export default function Editor() {
           </svg>
         </button>
       </div>
+
+      {/* Bottom bar for iOS keyboard visibility */}
+      <div className="fixed bottom-0 left-0 right-0 h-12 bg-dark-surface/90 border-t border-dark-border z-10 pointer-events-none" />
     </div>
   )
 }

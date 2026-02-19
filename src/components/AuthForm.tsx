@@ -20,7 +20,7 @@ export default function AuthForm({ onSuccess }: AuthFormProps) {
     await new Promise(resolve => setTimeout(resolve, 500))
 
     if (password === APP_PASSWORD) {
-      localStorage.setItem('cloud-messenger-auth', 'true')
+      sessionStorage.setItem('cloud-messenger-auth', 'true')
       onSuccess()
     } else {
       setError('Incorrect password')

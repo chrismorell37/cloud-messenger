@@ -7,9 +7,9 @@ function App() {
   const [isLoading, setIsLoading] = useState(true)
   const { isAuthenticated, setIsAuthenticated, setUser } = useEditorStore()
 
-  // Check if already authenticated via localStorage
+  // Check if already authenticated via sessionStorage (clears when browser/tab closes)
   useEffect(() => {
-    const isAuthed = localStorage.getItem('cloud-messenger-auth') === 'true'
+    const isAuthed = sessionStorage.getItem('cloud-messenger-auth') === 'true'
     if (isAuthed) {
       setIsAuthenticated(true)
       setUser({
@@ -21,7 +21,7 @@ function App() {
   }, [setIsAuthenticated, setUser])
 
   const handleSignOut = () => {
-    localStorage.removeItem('cloud-messenger-auth')
+    sessionStorage.removeItem('cloud-messenger-auth')
     setUser(null)
     setIsAuthenticated(false)
   }

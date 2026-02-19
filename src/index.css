@@ -23,7 +23,14 @@ body {
 
 /* TipTap editor styles */
 .tiptap {
-  @apply outline-none min-h-[calc(100vh-8rem)] p-4;
+  @apply outline-none min-h-[calc(100vh-8rem)] p-4 pb-32;
+}
+
+/* iOS keyboard accessory bar visibility fix */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
 
 .tiptap p {
