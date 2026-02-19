@@ -55,7 +55,7 @@ function App() {
       <header className="sticky top-0 z-20 bg-dark-bg/90 backdrop-blur-sm border-b border-dark-border">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <h1 className="text-lg font-semibold text-dark-text">
-            Pink + Blue
+            Pink/Blue
           </h1>
           
           <button

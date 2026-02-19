@@ -35,12 +35,9 @@ export default function AuthForm({ onSuccess }: AuthFormProps) {
         <div className="bg-dark-surface rounded-xl p-8 shadow-2xl border border-dark-border">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-dark-text mb-2">
-              Pink + Blue
+            <h1 className="text-2xl font-bold text-dark-text">
+              Pink/Blue
             </h1>
-            <p className="text-dark-muted text-sm">
-              Private space for two
-            </p>
           </div>
 
           {/* Form */}
