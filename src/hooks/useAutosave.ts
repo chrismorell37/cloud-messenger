@@ -45,6 +45,10 @@ export function useAutosave() {
       setLastSavedAt(new Date())
       setHasUnsavedChanges(false)
       setIsSaving(false)
+      
+      // Fire-and-forget notification (don't block on response)
+      fetch('/api/notify', { method: 'POST' }).catch(() => {})
+      
       return true
     } catch (err) {
       console.error('Error saving content:', err)

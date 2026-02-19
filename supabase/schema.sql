@@ -148,6 +148,20 @@ values (
 )
 on conflict (id) do nothing;
 
+-- Notification state table for rate limiting email notifications
+create table if not exists public.notification_state (
+  id text primary key default 'default',
+  last_sent_at timestamp with time zone
+);
+
+-- Disable RLS for notification_state
+alter table public.notification_state disable row level security;
+
+-- Insert default row
+insert into public.notification_state (id, last_sent_at)
+values ('default', null)
+on conflict (id) do nothing;
+
 -- IMPORTANT: After running this script, add your two users to allowed_users:
 -- INSERT INTO public.allowed_users (email, display_name) VALUES ('user1@example.com', 'User 1');
 -- INSERT INTO public.allowed_users (email, display_name) VALUES ('user2@example.com', 'User 2');
