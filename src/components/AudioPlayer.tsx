@@ -1,4 +1,5 @@
-import { NodeViewWrapper, NodeViewProps } from '@tiptap/react'
+import { NodeViewWrapper } from '@tiptap/react'
+import type { NodeViewProps } from '@tiptap/react'
 import { useRef } from 'react'
 
 export function AudioPlayer({ node, updateAttributes }: NodeViewProps) {
