@@ -13,6 +13,7 @@ import { useDebouncedCallback } from 'use-debounce'
 import { useAutosave } from '../hooks/useAutosave'
 import { useSupabaseRealtime, useMediaUpload } from '../hooks/useSupabase'
 import { usePresence } from '../hooks/usePresence'
+import { useDraftUpload } from '../hooks/useDraftUpload'
 import { useEditorStore } from '../stores/editorStore'
 import PresenceCursors from './PresenceCursors'
 
@@ -31,10 +32,12 @@ export default function Editor() {
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
   const [toolbarBottom, setToolbarBottom] = useState(0)
+  const [showDraftsMenu, setShowDraftsMenu] = useState(false)
   const { isSaving, hasUnsavedChanges, lastSavedAt, otherUserPresence } = useEditorStore()
   const { triggerSave, forceSave } = useAutosave()
   const { uploadMedia } = useMediaUpload()
-  const { updateCursor, clearCursor } = usePresence()
+  const { updateCursor, clearCursor, setRecordingStatus } = usePresence()
+  const { pendingDrafts, isUploading, uploadWithRetry, retryDraft, removeDraft } = useDraftUpload()
   const editorContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const filesInputRef = useRef<HTMLInputElement>(null)
@@ -316,6 +319,9 @@ export default function Editor() {
       mediaRecorderRef.current = mediaRecorder
       audioChunksRef.current = []
 
+      // Store the start time for duration calculation
+      const startTime = Date.now()
+
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data)
@@ -331,17 +337,24 @@ export default function Editor() {
           clearInterval(recordingTimerRef.current)
           recordingTimerRef.current = null
         }
+        
+        // Calculate final duration
+        const finalDuration = Math.floor((Date.now() - startTime) / 1000)
         setRecordingDuration(0)
 
-        // Create audio blob and upload
+        // Broadcast that we stopped recording
+        setRecordingStatus(false)
+
+        // Create audio blob and upload with retry
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType })
-        const extension = mimeType === 'audio/webm' ? 'webm' : 'm4a'
-        const audioFile = new File([audioBlob], `voice-note-${Date.now()}.${extension}`, { type: mimeType })
         
-        // Upload and insert
-        const url = await uploadMedia(audioFile)
-        if (url && editor) {
-          editor.chain().focus().setAudio({ src: url }).run()
+        const result = await uploadWithRetry(audioBlob, finalDuration, mimeType)
+        
+        if (result.success && result.url && editor) {
+          editor.chain().focus().setAudio({ src: result.url }).run()
+        } else if (!result.success) {
+          // Upload failed after retries - draft was saved
+          alert('Voice note saved as draft. Check pending uploads to retry.')
         }
       }
 
@@ -349,11 +362,13 @@ export default function Editor() {
       setIsRecording(true)
       setRecordingDuration(0)
       
+      // Broadcast that we're recording
+      setRecordingStatus(true)
+      
       // Start duration timer
       if (recordingTimerRef.current) {
         clearInterval(recordingTimerRef.current)
       }
-      const startTime = Date.now()
       recordingTimerRef.current = setInterval(() => {
         const elapsed = Math.floor((Date.now() - startTime) / 1000)
         setRecordingDuration(elapsed)
@@ -361,9 +376,10 @@ export default function Editor() {
       
     } catch (err) {
       console.error('Error starting recording:', err)
+      setRecordingStatus(false)
       alert('Could not access microphone. Please allow microphone access.')
     }
-  }, [editor, uploadMedia])
+  }, [editor, uploadWithRetry, setRecordingStatus])
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current) {
@@ -374,7 +390,8 @@ export default function Editor() {
       recordingTimerRef.current = null
     }
     setIsRecording(false)
-  }, [])
+    setRecordingStatus(false)
+  }, [setRecordingStatus])
 
   const toggleRecording = useCallback(() => {
     if (isRecording) {
@@ -383,6 +400,17 @@ export default function Editor() {
       startRecording()
     }
   }, [isRecording, startRecording, stopRecording])
+
+  // Handle retry of a draft voice note
+  const handleRetryDraft = useCallback(async (draftId: string) => {
+    const result = await retryDraft(draftId)
+    if (result.success && result.url && editor) {
+      editor.chain().focus().setAudio({ src: result.url }).run()
+      setShowDraftsMenu(false)
+    } else if (!result.success) {
+      alert('Upload failed. Please try again when you have a better connection.')
+    }
+  }, [editor, retryDraft])
 
   // Cleanup recording on unmount only
   useEffect(() => {
@@ -436,8 +464,17 @@ export default function Editor() {
             <div className="flex items-center gap-2 text-sm">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
               <span className="text-dark-muted">
-                {otherUserPresence.email.split('@')[0]} is here
+                {otherUserPresence.isRecording 
+                  ? `${otherUserPresence.email.split('@')[0]} is recording...`
+                  : `${otherUserPresence.email.split('@')[0]} is here`
+                }
               </span>
+              {otherUserPresence.isRecording && (
+                <div className="flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                  <span className="text-red-500 text-xs font-medium">Recording</span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -685,11 +722,14 @@ export default function Editor() {
         </div>
       )}
 
-      {/* Media menu backdrop */}
-      {showMediaMenu && (
+      {/* Menu backdrops */}
+      {(showMediaMenu || showDraftsMenu) && (
         <div 
           className="fixed inset-0 z-20"
-          onClick={() => setShowMediaMenu(false)}
+          onClick={() => {
+            setShowMediaMenu(false)
+            setShowDraftsMenu(false)
+          }}
         />
       )}
 
@@ -698,51 +738,140 @@ export default function Editor() {
         className="fixed right-6 flex flex-col gap-3 z-30"
         style={{ top: toolbarBottom - 140, bottom: 'auto' }}
       >
-        {/* Voice recording button */}
-        <button
-          onClick={toggleRecording}
-          className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg 
-                     transition-all duration-200 hover:scale-105 active:scale-95
-                     ${isRecording 
-                       ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
-                       : 'bg-dark-surface hover:bg-dark-border border border-dark-border'}`}
-          aria-label={isRecording ? 'Stop recording' : 'Start voice note'}
-        >
-          {isRecording ? (
-            <div className="flex flex-col items-center">
+        {/* Voice recording button with drafts */}
+        <div className="relative">
+          <button
+            onClick={isRecording ? stopRecording : () => setShowDraftsMenu(!showDraftsMenu)}
+            onDoubleClick={() => !isRecording && startRecording()}
+            className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg 
+                       transition-all duration-200 hover:scale-105 active:scale-95
+                       ${isRecording 
+                         ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
+                         : 'bg-dark-surface hover:bg-dark-border border border-dark-border'}`}
+            aria-label={isRecording ? 'Stop recording' : 'Voice notes menu'}
+          >
+            {isRecording ? (
+              <div className="flex flex-col items-center">
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  width="20" 
+                  height="20" 
+                  viewBox="0 0 24 24" 
+                  fill="currentColor"
+                  className="text-white"
+                >
+                  <rect x="6" y="6" width="12" height="12" rx="2" />
+                </svg>
+                <span className="text-[10px] text-white font-medium mt-0.5">
+                  {formatDuration(recordingDuration)}
+                </span>
+              </div>
+            ) : (
               <svg 
                 xmlns="http://www.w3.org/2000/svg" 
-                width="20" 
-                height="20" 
+                width="24" 
+                height="24" 
                 viewBox="0 0 24 24" 
-                fill="currentColor"
-                className="text-white"
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+                className="text-dark-text"
               >
-                <rect x="6" y="6" width="12" height="12" rx="2" />
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line x1="12" x2="12" y1="19" y2="22" />
               </svg>
-              <span className="text-[10px] text-white font-medium mt-0.5">
-                {formatDuration(recordingDuration)}
-              </span>
+            )}
+          </button>
+          
+          {/* Pending drafts badge */}
+          {pendingDrafts.length > 0 && !isRecording && (
+            <div className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center">
+              <span className="text-[10px] text-white font-bold">{pendingDrafts.length}</span>
             </div>
-          ) : (
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              width="24" 
-              height="24" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2" 
-              strokeLinecap="round" 
-              strokeLinejoin="round"
-              className="text-dark-text"
-            >
-              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-              <line x1="12" x2="12" y1="19" y2="22" />
-            </svg>
           )}
-        </button>
+          
+          {/* Drafts menu */}
+          {showDraftsMenu && !isRecording && (
+            <div className="absolute bottom-16 right-0 bg-dark-surface border border-dark-border rounded-xl shadow-xl overflow-hidden min-w-[220px]">
+              {/* Record new button */}
+              <button
+                onClick={() => {
+                  setShowDraftsMenu(false)
+                  startRecording()
+                }}
+                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-dark-border/50 transition-colors text-left"
+              >
+                <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  </svg>
+                </div>
+                <span className="text-dark-text font-medium">Record New</span>
+              </button>
+              
+              {/* Pending drafts */}
+              {pendingDrafts.length > 0 && (
+                <>
+                  <div className="border-t border-dark-border" />
+                  <div className="px-4 py-2 bg-orange-500/10">
+                    <span className="text-xs text-orange-600 font-medium">
+                      Pending Uploads ({pendingDrafts.length})
+                    </span>
+                  </div>
+                  {pendingDrafts.map((draft) => (
+                    <div
+                      key={draft.id}
+                      className="px-4 py-3 flex items-center gap-3 border-t border-dark-border/50"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-dark-text truncate">
+                          Voice note ({formatDuration(draft.duration)})
+                        </p>
+                        <p className="text-xs text-dark-muted">
+                          {new Date(draft.createdAt).toLocaleTimeString()}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleRetryDraft(draft.id)}
+                          disabled={isUploading}
+                          className="p-2 hover:bg-dark-border rounded-lg transition-colors disabled:opacity-50"
+                          aria-label="Retry upload"
+                        >
+                          {isUploading ? (
+                            <div className="w-4 h-4 border-2 border-dark-muted border-t-dark-accent rounded-full animate-spin" />
+                          ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-dark-accent">
+                              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                              <path d="M3 3v5h5"/>
+                              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+                              <path d="M16 16h5v5"/>
+                            </svg>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => removeDraft(draft.id)}
+                          className="p-2 hover:bg-dark-border rounded-lg transition-colors"
+                          aria-label="Delete draft"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
+                            <path d="M3 6h18"/>
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Media menu */}
         {showMediaMenu && (

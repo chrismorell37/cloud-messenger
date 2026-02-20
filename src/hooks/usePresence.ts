@@ -7,12 +7,14 @@ interface PresencePayload {
   id: string
   email: string
   cursor: { x: number; y: number } | null
+  isRecording?: boolean
 }
 
 export function usePresence() {
   const { user, setOtherUserPresence } = useEditorStore()
   const channelRef = useRef<RealtimeChannel | null>(null)
   const cursorRef = useRef<{ x: number; y: number } | null>(null)
+  const isRecordingRef = useRef<boolean>(false)
 
   // Update cursor position
   const updateCursor = useCallback((x: number, y: number) => {
@@ -23,6 +25,7 @@ export function usePresence() {
         id: user.id,
         email: user.email,
         cursor: { x, y },
+        isRecording: isRecordingRef.current,
       })
     }
   }, [user])
@@ -36,6 +39,21 @@ export function usePresence() {
         id: user.id,
         email: user.email,
         cursor: null,
+        isRecording: isRecordingRef.current,
+      })
+    }
+  }, [user])
+
+  // Set recording status
+  const setRecordingStatus = useCallback((isRecording: boolean) => {
+    isRecordingRef.current = isRecording
+    
+    if (channelRef.current && user) {
+      channelRef.current.track({
+        id: user.id,
+        email: user.email,
+        cursor: cursorRef.current,
+        isRecording,
       })
     }
   }, [user])
@@ -63,6 +81,7 @@ export function usePresence() {
               id: otherUser.id,
               email: otherUser.email,
               cursor: otherUser.cursor,
+              isRecording: otherUser.isRecording,
             })
             return
           }
@@ -78,6 +97,7 @@ export function usePresence() {
             id: otherUser.id,
             email: otherUser.email,
             cursor: otherUser.cursor,
+            isRecording: otherUser.isRecording,
           })
         }
       })
@@ -92,6 +112,7 @@ export function usePresence() {
             id: user.id,
             email: user.email,
             cursor: cursorRef.current,
+            isRecording: isRecordingRef.current,
           })
         }
       })
@@ -107,5 +128,6 @@ export function usePresence() {
   return {
     updateCursor,
     clearCursor,
+    setRecordingStatus,
   }
 }

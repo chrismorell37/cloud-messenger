@@ -19,6 +19,7 @@ interface EditorState {
     id: string
     email: string
     cursor: { x: number; y: number } | null
+    isRecording?: boolean
   } | null
   
   // Actions
