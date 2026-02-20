@@ -393,14 +393,6 @@ export default function Editor() {
     setRecordingStatus(false)
   }, [setRecordingStatus])
 
-  const toggleRecording = useCallback(() => {
-    if (isRecording) {
-      stopRecording()
-    } else {
-      startRecording()
-    }
-  }, [isRecording, startRecording, stopRecording])
-
   // Handle retry of a draft voice note
   const handleRetryDraft = useCallback(async (draftId: string) => {
     const result = await retryDraft(draftId)
