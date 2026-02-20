@@ -1,4 +1,5 @@
-import { Node, mergeAttributes } from '@tiptap/react'
+import { Node, mergeAttributes, ReactNodeViewRenderer } from '@tiptap/react'
+import { AudioPlayer } from '../components/AudioPlayer'
 
 // Custom Video extension for TipTap
 export const Video = Node.create({
@@ -71,7 +72,7 @@ export const Video = Node.create({
   },
 })
 
-// Custom Audio extension for TipTap
+// Custom Audio extension for TipTap with "New!" badge support
 export const Audio = Node.create({
   name: 'audio',
   group: 'block',
@@ -83,11 +84,8 @@ export const Audio = Node.create({
       src: {
         default: null,
       },
-      controls: {
-        default: true,
-      },
-      preload: {
-        default: 'metadata',
+      played: {
+        default: false,
       },
     }
   },
@@ -96,19 +94,49 @@ export const Audio = Node.create({
     return [
       {
         tag: 'audio',
+        getAttrs: (node) => {
+          if (typeof node === 'string') return {}
+          return {
+            src: node.getAttribute('src'),
+            played: node.getAttribute('data-played') === 'true',
+          }
+        },
+      },
+      {
+        tag: 'div[data-audio-player]',
+        getAttrs: (node) => {
+          if (typeof node === 'string') return {}
+          const audio = node.querySelector('audio')
+          return {
+            src: audio?.getAttribute('src') || null,
+            played: node.getAttribute('data-played') === 'true',
+          }
+        },
       },
     ]
   },
 
   renderHTML({ HTMLAttributes }) {
     return [
-      'audio',
-      mergeAttributes(HTMLAttributes, {
-        controls: true,
-        preload: 'metadata',
-        style: 'width: 100%; border-radius: 0.5rem;',
+      'div',
+      mergeAttributes({
+        'data-audio-player': 'true',
+        'data-played': HTMLAttributes.played ? 'true' : 'false',
       }),
+      [
+        'audio',
+        {
+          src: HTMLAttributes.src,
+          controls: true,
+          preload: 'metadata',
+          style: 'width: 100%; border-radius: 0.5rem;',
+        },
+      ],
     ]
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(AudioPlayer)
   },
 
   addCommands() {
@@ -118,7 +146,7 @@ export const Audio = Node.create({
         ({ commands }) => {
           return commands.insertContent({
             type: this.name,
-            attrs: options,
+            attrs: { ...options, played: false },
           })
         },
     }

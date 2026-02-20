@@ -71,6 +71,31 @@ body {
   max-width: 100%;
 }
 
+/* Audio player wrapper with New! badge */
+.audio-player-wrapper {
+  @apply my-4;
+}
+
+.audio-player-wrapper .relative {
+  @apply inline-block w-full;
+}
+
+.audio-new-badge {
+  @apply absolute -top-2 -right-2 bg-dark-accent text-white text-xs font-bold px-2 py-0.5 rounded-full z-10;
+  animation: pulse-badge 2s ease-in-out infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
 .tiptap ul,
 .tiptap ol {
   @apply pl-6 my-2;
