@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import Image from '@tiptap/extension-image'
 import Link from '@tiptap/extension-link'
 import Underline from '@tiptap/extension-underline'
 import Placeholder from '@tiptap/extension-placeholder'
 import type { JSONContent } from '@tiptap/react'
-import { Video, Audio, SpotifyEmbed } from '../lib/extensions'
+import { CustomImage, Video, Audio, SpotifyEmbed } from '../lib/extensions'
 import { compressVideoIfNeeded, isVideoFile, getFileSizeMB, MAX_SIZE_MB } from '../lib/videoCompression'
 import { searchSongs, getSpotifyUrl, extractSpotifyUrl, buildSpotifySearchUrl, type SongResult } from '../lib/musicSearch'
 import { useDebouncedCallback } from 'use-debounce'
@@ -71,13 +70,7 @@ export default function Editor() {
   const editor = useEditor({
     extensions: [
       StarterKit,
-      Image.configure({
-        allowBase64: true,
-        inline: false,
-        HTMLAttributes: {
-          class: 'w-full h-auto rounded-lg',
-        },
-      }),
+      CustomImage,
       Link.configure({
         autolink: true,
         openOnClick: true,

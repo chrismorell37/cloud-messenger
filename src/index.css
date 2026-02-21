@@ -157,3 +157,158 @@ body {
 ::selection {
   @apply bg-dark-accent/20;
 }
+
+/* Media wrapper styles */
+.media-wrapper {
+  @apply my-4;
+}
+
+.media-content {
+  @apply relative;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Media node wrappers */
+.image-node-wrapper,
+.video-node-wrapper,
+.spotify-node-wrapper {
+  @apply my-4;
+}
+
+/* Reactions display */
+.media-reactions {
+  @apply flex flex-wrap gap-1.5 mt-2;
+}
+
+.reaction-badge {
+  @apply flex items-center gap-1 px-2 py-1 bg-dark-surface rounded-full
+         border border-dark-border hover:bg-dark-border transition-colors;
+}
+
+.reaction-badge-mine {
+  @apply bg-dark-accent/20 border-dark-accent;
+}
+
+.reaction-emoji {
+  @apply text-base leading-none;
+}
+
+.reaction-count {
+  @apply text-xs text-dark-muted font-medium;
+}
+
+/* Thread styles */
+.media-thread {
+  @apply mt-2;
+}
+
+.thread-toggle {
+  @apply flex items-center gap-1.5 text-sm text-dark-muted hover:text-dark-text transition-colors;
+}
+
+.thread-arrow {
+  @apply transition-transform duration-200;
+}
+
+.thread-arrow.expanded {
+  @apply rotate-90;
+}
+
+.thread-replies {
+  @apply mt-2 pl-3 border-l-2 border-dark-border space-y-2;
+}
+
+.thread-reply {
+  @apply flex flex-wrap items-baseline gap-x-2 text-sm;
+}
+
+.reply-author {
+  @apply font-medium text-dark-text;
+}
+
+.reply-text {
+  @apply text-dark-text;
+}
+
+.reply-time {
+  @apply text-xs text-dark-muted;
+}
+
+/* Reply input */
+.reply-input-container {
+  @apply flex gap-2 mt-2;
+}
+
+.reply-input {
+  @apply flex-1 px-3 py-2 bg-dark-surface border border-dark-border rounded-lg
+         text-sm text-dark-text placeholder:text-dark-muted
+         focus:outline-none focus:border-dark-accent transition-colors;
+}
+
+.reply-submit {
+  @apply px-4 py-2 bg-dark-accent hover:bg-dark-accent-hover text-white
+         text-sm font-medium rounded-lg transition-colors
+         disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+/* Context menu */
+.context-menu-backdrop {
+  @apply fixed inset-0 z-40;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.context-menu {
+  @apply fixed z-50 bg-dark-surface/95 backdrop-blur-xl rounded-2xl shadow-2xl
+         border border-dark-border overflow-hidden;
+  min-width: 260px;
+  animation: context-menu-appear 0.2s ease-out;
+}
+
+@keyframes context-menu-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.context-menu-emojis {
+  @apply flex justify-around p-3 gap-1;
+}
+
+.emoji-button {
+  @apply w-11 h-11 flex items-center justify-center text-2xl
+         rounded-full hover:bg-dark-border active:scale-95 transition-all;
+}
+
+.emoji-button-active {
+  @apply bg-dark-accent/20 ring-2 ring-dark-accent;
+}
+
+.context-menu-divider {
+  @apply h-px bg-dark-border;
+}
+
+.context-menu-action {
+  @apply w-full px-4 py-3 flex items-center gap-3 text-dark-text
+         hover:bg-dark-border/50 transition-colors text-left;
+}
+
+.context-menu-action svg {
+  @apply text-dark-muted;
+}
+
+.context-menu-action-danger {
+  @apply text-red-500;
+}
+
+.context-menu-action-danger svg {
+  @apply text-red-500;
+}

@@ -1,5 +1,82 @@
 import { Node, mergeAttributes, ReactNodeViewRenderer } from '@tiptap/react'
 import { AudioPlayer } from '../components/AudioPlayer'
+import { ImageNode } from '../components/ImageNode'
+import { VideoNode } from '../components/VideoNode'
+import { SpotifyNode } from '../components/SpotifyNode'
+
+// Shared attributes for reactions and replies
+const mediaInteractionAttributes = {
+  reactions: {
+    default: {},
+    parseHTML: (element: HTMLElement) => {
+      const data = element.getAttribute('data-reactions')
+      return data ? JSON.parse(data) : {}
+    },
+    renderHTML: (attributes: { reactions?: Record<string, string[]> }) => {
+      if (!attributes.reactions || Object.keys(attributes.reactions).length === 0) {
+        return {}
+      }
+      return { 'data-reactions': JSON.stringify(attributes.reactions) }
+    },
+  },
+  replies: {
+    default: [],
+    parseHTML: (element: HTMLElement) => {
+      const data = element.getAttribute('data-replies')
+      return data ? JSON.parse(data) : []
+    },
+    renderHTML: (attributes: { replies?: unknown[] }) => {
+      if (!attributes.replies || attributes.replies.length === 0) {
+        return {}
+      }
+      return { 'data-replies': JSON.stringify(attributes.replies) }
+    },
+  },
+}
+
+// Custom Image extension with reactions and replies
+export const CustomImage = Node.create({
+  name: 'image',
+  group: 'block',
+  atom: true,
+  draggable: true,
+
+  addAttributes() {
+    return {
+      src: { default: null },
+      alt: { default: null },
+      title: { default: null },
+      ...mediaInteractionAttributes,
+    }
+  },
+
+  parseHTML() {
+    return [{ tag: 'img[src]' }]
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return ['img', mergeAttributes(HTMLAttributes, {
+      style: 'width: 100%; height: auto; border-radius: 0.5rem;',
+    })]
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(ImageNode)
+  },
+
+  addCommands() {
+    return {
+      setImage:
+        (options: { src: string; alt?: string; title?: string }) =>
+        ({ commands }) => {
+          return commands.insertContent({
+            type: this.name,
+            attrs: options,
+          })
+        },
+    }
+  },
+})
 
 // Custom Video extension for TipTap
 export const Video = Node.create({
@@ -10,39 +87,14 @@ export const Video = Node.create({
 
   addAttributes() {
     return {
-      src: {
-        default: null,
-      },
-      controls: {
-        default: true,
-      },
-      autoplay: {
-        default: false,
-      },
-      loop: {
-        default: false,
-      },
-      muted: {
-        default: false,
-      },
-      playsinline: {
-        default: true, // Important for iOS
-      },
-      poster: {
-        default: null,
-      },
-      width: {
-        default: '100%',
-      },
+      src: { default: null },
+      poster: { default: null },
+      ...mediaInteractionAttributes,
     }
   },
 
   parseHTML() {
-    return [
-      {
-        tag: 'video',
-      },
-    ]
+    return [{ tag: 'video' }]
   },
 
   renderHTML({ HTMLAttributes }) {
@@ -56,6 +108,10 @@ export const Video = Node.create({
         style: 'width: 100%; height: auto; border-radius: 0.5rem; object-fit: contain;',
       }),
     ]
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(VideoNode)
   },
 
   addCommands() {
@@ -81,12 +137,9 @@ export const Audio = Node.create({
 
   addAttributes() {
     return {
-      src: {
-        default: null,
-      },
-      played: {
-        default: false,
-      },
+      src: { default: null },
+      played: { default: false },
+      ...mediaInteractionAttributes,
     }
   },
 
@@ -162,35 +215,25 @@ export const SpotifyEmbed = Node.create({
 
   addAttributes() {
     return {
-      spotifyUri: {
-        default: null,
-      },
+      spotifyUri: { default: null },
+      ...mediaInteractionAttributes,
     }
   },
 
   parseHTML() {
-    return [
-      {
-        tag: 'div[data-spotify-embed]',
-      },
-    ]
+    return [{ tag: 'div[data-spotify-embed]' }]
   },
 
   renderHTML({ HTMLAttributes }) {
     const spotifyUri = HTMLAttributes.spotifyUri || ''
-    // Convert spotify URI or URL to embed URL
-    // Handles: spotify:track:xxx, https://open.spotify.com/track/xxx
     let embedUrl = ''
     if (spotifyUri.startsWith('spotify:')) {
-      // Convert URI format: spotify:track:xxx -> https://open.spotify.com/embed/track/xxx
       const parts = spotifyUri.split(':')
       if (parts.length >= 3) {
         embedUrl = `https://open.spotify.com/embed/${parts[1]}/${parts[2]}`
       }
     } else if (spotifyUri.includes('open.spotify.com')) {
-      // Convert URL format: https://open.spotify.com/track/xxx -> embed version
       embedUrl = spotifyUri.replace('open.spotify.com/', 'open.spotify.com/embed/')
-      // Remove any query params
       embedUrl = embedUrl.split('?')[0]
     }
 
@@ -215,6 +258,10 @@ export const SpotifyEmbed = Node.create({
     ]
   },
 
+  addNodeView() {
+    return ReactNodeViewRenderer(SpotifyNode)
+  },
+
   addCommands() {
     return {
       setSpotifyEmbed:
@@ -232,6 +279,9 @@ export const SpotifyEmbed = Node.create({
 // Type declarations for custom commands
 declare module '@tiptap/react' {
   interface Commands<ReturnType> {
+    image: {
+      setImage: (options: { src: string; alt?: string; title?: string }) => ReturnType
+    }
     video: {
       setVideo: (options: { src: string; poster?: string }) => ReturnType
     }

@@ -1,21 +1,27 @@
 import { NodeViewWrapper } from '@tiptap/react'
 import type { NodeViewProps } from '@tiptap/react'
-import { useRef } from 'react'
 import { MediaWrapper, type Reply } from './MediaWrapper'
 import { useEditorStore } from '../stores/editorStore'
 
-export function AudioPlayer({ node, updateAttributes, deleteNode }: NodeViewProps) {
-  const audioRef = useRef<HTMLAudioElement>(null)
-  const { src, played, reactions = {}, replies = [] } = node.attrs
+function getSpotifyEmbedUrl(spotifyUri: string): string {
+  if (spotifyUri.startsWith('spotify:')) {
+    const parts = spotifyUri.split(':')
+    if (parts.length >= 3) {
+      return `https://open.spotify.com/embed/${parts[1]}/${parts[2]}`
+    }
+  } else if (spotifyUri.includes('open.spotify.com')) {
+    let embedUrl = spotifyUri.replace('open.spotify.com/', 'open.spotify.com/embed/')
+    return embedUrl.split('?')[0]
+  }
+  return ''
+}
+
+export function SpotifyNode({ node, updateAttributes, deleteNode }: NodeViewProps) {
+  const { spotifyUri, reactions = {}, replies = [] } = node.attrs
   const { user } = useEditorStore()
   const userId = user?.id || 'anonymous'
   const userName = user?.email?.split('@')[0] || 'Anonymous'
-
-  const handlePlay = () => {
-    if (!played) {
-      updateAttributes({ played: true })
-    }
-  }
+  const embedUrl = getSpotifyEmbedUrl(spotifyUri || '')
 
   const handleAddReaction = (emoji: string) => {
     const currentReactions = { ...reactions }
@@ -51,7 +57,7 @@ export function AudioPlayer({ node, updateAttributes, deleteNode }: NodeViewProp
   }
 
   return (
-    <NodeViewWrapper className="audio-player-wrapper">
+    <NodeViewWrapper className="spotify-node-wrapper">
       <MediaWrapper
         reactions={reactions}
         replies={replies}
@@ -61,21 +67,15 @@ export function AudioPlayer({ node, updateAttributes, deleteNode }: NodeViewProp
         onReply={handleReply}
         userId={userId}
       >
-        <div className="relative">
-          {!played && (
-            <span className="audio-new-badge">
-              New!
-            </span>
-          )}
-          <audio
-            ref={audioRef}
-            src={src}
-            controls
-            preload="metadata"
-            onPlay={handlePlay}
-            className="w-full rounded-lg"
-          />
-        </div>
+        <iframe
+          src={embedUrl}
+          width="100%"
+          height="80"
+          frameBorder="0"
+          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+          loading="lazy"
+          style={{ borderRadius: '12px' }}
+        />
       </MediaWrapper>
     </NodeViewWrapper>
   )

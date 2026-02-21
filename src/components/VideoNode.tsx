@@ -1,21 +1,13 @@
 import { NodeViewWrapper } from '@tiptap/react'
 import type { NodeViewProps } from '@tiptap/react'
-import { useRef } from 'react'
 import { MediaWrapper, type Reply } from './MediaWrapper'
 import { useEditorStore } from '../stores/editorStore'
 
-export function AudioPlayer({ node, updateAttributes, deleteNode }: NodeViewProps) {
-  const audioRef = useRef<HTMLAudioElement>(null)
-  const { src, played, reactions = {}, replies = [] } = node.attrs
+export function VideoNode({ node, updateAttributes, deleteNode }: NodeViewProps) {
+  const { src, reactions = {}, replies = [] } = node.attrs
   const { user } = useEditorStore()
   const userId = user?.id || 'anonymous'
   const userName = user?.email?.split('@')[0] || 'Anonymous'
-
-  const handlePlay = () => {
-    if (!played) {
-      updateAttributes({ played: true })
-    }
-  }
 
   const handleAddReaction = (emoji: string) => {
     const currentReactions = { ...reactions }
@@ -51,7 +43,7 @@ export function AudioPlayer({ node, updateAttributes, deleteNode }: NodeViewProp
   }
 
   return (
-    <NodeViewWrapper className="audio-player-wrapper">
+    <NodeViewWrapper className="video-node-wrapper">
       <MediaWrapper
         reactions={reactions}
         replies={replies}
@@ -61,21 +53,14 @@ export function AudioPlayer({ node, updateAttributes, deleteNode }: NodeViewProp
         onReply={handleReply}
         userId={userId}
       >
-        <div className="relative">
-          {!played && (
-            <span className="audio-new-badge">
-              New!
-            </span>
-          )}
-          <audio
-            ref={audioRef}
-            src={src}
-            controls
-            preload="metadata"
-            onPlay={handlePlay}
-            className="w-full rounded-lg"
-          />
-        </div>
+        <video
+          src={src}
+          controls
+          playsInline
+          preload="metadata"
+          className="w-full h-auto rounded-lg"
+          style={{ objectFit: 'contain' }}
+        />
       </MediaWrapper>
     </NodeViewWrapper>
   )
