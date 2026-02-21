@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const PRESET_EMOJIS = ['🩵', '🥹', '🤣', '🩷', '❤️‍🔥', '🫣']
 
@@ -22,8 +22,19 @@ export function MediaContextMenu({
   onClose,
 }: MediaContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
+  const [isActive, setIsActive] = useState(false)
+
+  // Delay activation to prevent immediate close from the touch that opened the menu
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsActive(true)
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [])
 
   useEffect(() => {
+    if (!isActive) return
+
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         onClose()
@@ -45,7 +56,7 @@ export function MediaContextMenu({
       document.removeEventListener('touchstart', handleClickOutside)
       document.removeEventListener('keydown', handleEscape)
     }
-  }, [onClose])
+  }, [onClose, isActive])
 
   // Adjust position to stay within viewport
   const adjustedPosition = {
@@ -56,7 +67,11 @@ export function MediaContextMenu({
   return (
     <>
       {/* Backdrop */}
-      <div className="context-menu-backdrop" onClick={onClose} />
+      <div 
+        className="context-menu-backdrop" 
+        onClick={() => isActive && onClose()}
+        onTouchEnd={() => isActive && onClose()}
+      />
       
       {/* Menu */}
       <div
