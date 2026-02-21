@@ -95,6 +95,7 @@ export function ImageGalleryNode({ node, updateAttributes, editor, getPos }: Nod
         onDelete={handleDelete}
         onReply={handleReply}
         userId={userId}
+        mediaUrl={images[currentIndex]}
       >
         <div className="image-gallery-container">
           <div 

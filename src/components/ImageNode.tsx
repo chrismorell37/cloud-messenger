@@ -60,6 +60,7 @@ export function ImageNode({ node, updateAttributes, editor, getPos }: NodeViewPr
         onDelete={handleDelete}
         onReply={handleReply}
         userId={userId}
+        mediaUrl={src}
       >
         <img
           src={src}

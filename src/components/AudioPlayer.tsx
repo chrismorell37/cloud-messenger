@@ -67,6 +67,7 @@ export function AudioPlayer({ node, updateAttributes, editor, getPos }: NodeView
         onDelete={handleDelete}
         onReply={handleReply}
         userId={userId}
+        mediaUrl={src}
       >
         <div className="relative">
           {!played && (

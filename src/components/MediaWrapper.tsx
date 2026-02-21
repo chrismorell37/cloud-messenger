@@ -23,6 +23,7 @@ interface MediaWrapperProps {
   onDelete: () => void
   onReply: (text: string) => void
   userId: string
+  mediaUrl?: string
 }
 
 const DOUBLE_TAP_DELAY = 300
@@ -38,6 +39,7 @@ export function MediaWrapper({
   onDelete,
   onReply,
   userId,
+  mediaUrl,
 }: MediaWrapperProps) {
   const [showContextMenu, setShowContextMenu] = useState(false)
   const [showReplyInput, setShowReplyInput] = useState(false)
@@ -137,6 +139,52 @@ export function MediaWrapper({
       setIsThreadExpanded(true)
     }
   }, [replyText, onReply])
+
+  const handleSave = useCallback(async () => {
+    if (!mediaUrl) return
+    
+    try {
+      const response = await fetch(mediaUrl)
+      const blob = await response.blob()
+      
+      // Determine file extension from mime type
+      const mimeToExt: Record<string, string> = {
+        'image/jpeg': 'jpg',
+        'image/png': 'png',
+        'image/gif': 'gif',
+        'image/webp': 'webp',
+        'video/mp4': 'mp4',
+        'video/webm': 'webm',
+        'video/quicktime': 'mov',
+        'audio/webm': 'webm',
+        'audio/mp4': 'm4a',
+        'audio/mpeg': 'mp3',
+        'audio/wav': 'wav',
+      }
+      const ext = mimeToExt[blob.type] || 'file'
+      const filename = `pinkblue-${Date.now()}.${ext}`
+      
+      const file = new File([blob], filename, { type: blob.type })
+      
+      // Try Web Share API first (works on iOS)
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file] })
+      } else {
+        // Fallback: direct download
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      }
+    } catch (err) {
+      console.error('Save failed:', err)
+    }
+    setShowContextMenu(false)
+  }, [mediaUrl])
 
   const reactionEntries = Object.entries(reactions).filter(([, userIds]) => userIds.length > 0)
 
@@ -254,6 +302,7 @@ export function MediaWrapper({
             setShowContextMenu(false)
             setShowReplyInput(true)
           }}
+          onSave={mediaUrl ? handleSave : undefined}
           onDelete={() => {
             setShowContextMenu(false)
             onDelete()
