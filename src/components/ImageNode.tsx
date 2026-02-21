@@ -6,7 +6,7 @@ import { useEditorStore } from '../stores/editorStore'
 
 export function ImageNode({ node, updateAttributes, editor, getPos }: NodeViewProps) {
   const { src, reactions = {}, replies = [] } = node.attrs
-  const { user } = useEditorStore()
+  const { user, setLightboxImage } = useEditorStore()
   const userId = user?.id || 'anonymous'
   const userName = user?.email?.split('@')[0] || 'Anonymous'
 
@@ -50,6 +50,10 @@ export function ImageNode({ node, updateAttributes, editor, getPos }: NodeViewPr
     }
   }, [editor, getPos, node.nodeSize])
 
+  const handleTap = useCallback(() => {
+    setLightboxImage(src)
+  }, [src, setLightboxImage])
+
   return (
     <NodeViewWrapper className="image-node-wrapper">
       <MediaWrapper
@@ -61,6 +65,7 @@ export function ImageNode({ node, updateAttributes, editor, getPos }: NodeViewPr
         onReply={handleReply}
         userId={userId}
         mediaUrl={src}
+        onTap={handleTap}
       >
         <img
           src={src}

@@ -22,6 +22,9 @@ interface EditorState {
     isRecording?: boolean
   } | null
   
+  // Lightbox state
+  lightboxImage: string | null
+  
   // Actions
   setDocumentId: (id: string) => void
   setContent: (content: JSONContent) => void
@@ -31,6 +34,7 @@ interface EditorState {
   setUser: (user: User | null) => void
   setIsAuthenticated: (isAuthenticated: boolean) => void
   setOtherUserPresence: (presence: EditorState['otherUserPresence']) => void
+  setLightboxImage: (url: string | null) => void
   reset: () => void
 }
 
@@ -43,6 +47,7 @@ const initialState = {
   user: null,
   isAuthenticated: false,
   otherUserPresence: null,
+  lightboxImage: null,
 }
 
 export const useEditorStore = create<EditorState>((set) => ({
@@ -56,5 +61,6 @@ export const useEditorStore = create<EditorState>((set) => ({
   setUser: (user) => set({ user }),
   setIsAuthenticated: (isAuthenticated) => set({ isAuthenticated }),
   setOtherUserPresence: (presence) => set({ otherUserPresence: presence }),
+  setLightboxImage: (url) => set({ lightboxImage: url }),
   reset: () => set(initialState),
 }))

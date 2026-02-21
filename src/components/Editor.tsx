@@ -16,6 +16,7 @@ import { usePresence } from '../hooks/usePresence'
 import { useDraftUpload } from '../hooks/useDraftUpload'
 import { useEditorStore } from '../stores/editorStore'
 import PresenceCursors from './PresenceCursors'
+import { PhotoLightbox } from './PhotoLightbox'
 
 export default function Editor() {
   const [isLoading, setIsLoading] = useState(true)
@@ -1142,6 +1143,9 @@ export default function Editor() {
           </div>
         </div>
       )}
+
+      {/* Photo lightbox for full-screen image viewing */}
+      <PhotoLightbox />
     </div>
   )
 }

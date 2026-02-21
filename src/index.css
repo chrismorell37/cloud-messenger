@@ -411,3 +411,34 @@ body {
 .context-menu-action-danger svg {
   @apply text-red-500;
 }
+
+/* Photo Lightbox */
+.lightbox-backdrop {
+  @apply fixed inset-0 z-[100] flex items-center justify-center;
+  background: rgba(0, 0, 0, 0.95);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.lightbox-close {
+  @apply absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center
+         rounded-full text-white/80 hover:text-white transition-colors;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.lightbox-image-container {
+  @apply w-full h-full flex items-center justify-center overflow-hidden;
+  touch-action: none;
+}
+
+.lightbox-image {
+  @apply max-w-full max-h-full object-contain select-none;
+  transition: transform 0.1s ease-out;
+  -webkit-user-drag: none;
+}
+
+.lightbox-reset {
+  @apply absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2
+         text-sm text-white/80 rounded-full transition-colors;
+  background: rgba(255, 255, 255, 0.15);
+}

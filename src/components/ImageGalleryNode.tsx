@@ -6,7 +6,7 @@ import { useEditorStore } from '../stores/editorStore'
 
 export function ImageGalleryNode({ node, updateAttributes, editor, getPos }: NodeViewProps) {
   const { images = [], reactions = {}, replies = [] } = node.attrs
-  const { user } = useEditorStore()
+  const { user, setLightboxImage } = useEditorStore()
   const userId = user?.id || 'anonymous'
   const userName = user?.email?.split('@')[0] || 'Anonymous'
   
@@ -53,6 +53,12 @@ export function ImageGalleryNode({ node, updateAttributes, editor, getPos }: Nod
     }
   }, [editor, getPos, node.nodeSize])
 
+  const handleTap = useCallback(() => {
+    if (images[currentIndex]) {
+      setLightboxImage(images[currentIndex])
+    }
+  }, [images, currentIndex, setLightboxImage])
+
   const handleScroll = useCallback(() => {
     const container = scrollContainerRef.current
     if (!container) return
@@ -96,6 +102,7 @@ export function ImageGalleryNode({ node, updateAttributes, editor, getPos }: Nod
         onReply={handleReply}
         userId={userId}
         mediaUrl={images[currentIndex]}
+        onTap={handleTap}
       >
         <div className="image-gallery-container">
           <div 

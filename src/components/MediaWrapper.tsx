@@ -24,6 +24,7 @@ interface MediaWrapperProps {
   onReply: (text: string) => void
   userId: string
   mediaUrl?: string
+  onTap?: () => void
 }
 
 const DOUBLE_TAP_DELAY = 300
@@ -40,6 +41,7 @@ export function MediaWrapper({
   onReply,
   userId,
   mediaUrl,
+  onTap,
 }: MediaWrapperProps) {
   const [showContextMenu, setShowContextMenu] = useState(false)
   const [showReplyInput, setShowReplyInput] = useState(false)
@@ -49,6 +51,7 @@ export function MediaWrapper({
   
   const lastTapRef = useRef<number>(0)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const singleTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchStartRef = useRef<{ x: number; y: number } | null>(null)
   const isLongPressRef = useRef(false)
 
@@ -56,6 +59,10 @@ export function MediaWrapper({
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current)
       longPressTimerRef.current = null
+    }
+    if (singleTapTimerRef.current) {
+      clearTimeout(singleTapTimerRef.current)
+      singleTapTimerRef.current = null
     }
     setIsPressing(false)
   }, [])
@@ -103,7 +110,12 @@ export function MediaWrapper({
     const timeSinceLastTap = now - lastTapRef.current
     
     if (timeSinceLastTap < DOUBLE_TAP_DELAY) {
+      // Double tap - toggle heart reaction
       e.preventDefault()
+      if (singleTapTimerRef.current) {
+        clearTimeout(singleTapTimerRef.current)
+        singleTapTimerRef.current = null
+      }
       const hasReacted = reactions[DEFAULT_REACTION]?.includes(userId)
       if (hasReacted) {
         onRemoveReaction(DEFAULT_REACTION)
@@ -112,9 +124,16 @@ export function MediaWrapper({
       }
       lastTapRef.current = 0
     } else {
+      // First tap - wait to see if it's a double tap
       lastTapRef.current = now
+      if (onTap) {
+        singleTapTimerRef.current = setTimeout(() => {
+          onTap()
+          singleTapTimerRef.current = null
+        }, DOUBLE_TAP_DELAY)
+      }
     }
-  }, [reactions, userId, onAddReaction, onRemoveReaction, clearAllTimers])
+  }, [reactions, userId, onAddReaction, onRemoveReaction, clearAllTimers, onTap])
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
