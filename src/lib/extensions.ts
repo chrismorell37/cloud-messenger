@@ -3,6 +3,7 @@ import { AudioPlayer } from '../components/AudioPlayer'
 import { ImageNode } from '../components/ImageNode'
 import { VideoNode } from '../components/VideoNode'
 import { SpotifyNode } from '../components/SpotifyNode'
+import { ImageGalleryNode } from '../components/ImageGalleryNode'
 
 // Shared attributes for reactions and replies
 const mediaInteractionAttributes = {
@@ -105,6 +106,8 @@ export const Video = Node.create({
         playsinline: true,
         'webkit-playsinline': true,
         preload: 'metadata',
+        autoplay: false,
+        loop: false,
         style: 'width: 100%; height: auto; border-radius: 0.5rem; object-fit: contain;',
       }),
     ]
@@ -276,6 +279,72 @@ export const SpotifyEmbed = Node.create({
   },
 })
 
+// Custom Image Gallery extension for carousel/album display
+export const ImageGallery = Node.create({
+  name: 'imageGallery',
+  group: 'block',
+  atom: true,
+  draggable: true,
+
+  addAttributes() {
+    return {
+      images: {
+        default: [],
+        parseHTML: (element: HTMLElement) => {
+          const data = element.getAttribute('data-images')
+          return data ? JSON.parse(data) : []
+        },
+        renderHTML: (attributes: { images?: string[] }) => {
+          if (!attributes.images || attributes.images.length === 0) {
+            return {}
+          }
+          return { 'data-images': JSON.stringify(attributes.images) }
+        },
+      },
+      ...mediaInteractionAttributes,
+    }
+  },
+
+  parseHTML() {
+    return [{ tag: 'div[data-image-gallery]' }]
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    const images = HTMLAttributes.images || []
+    return [
+      'div',
+      mergeAttributes(HTMLAttributes, {
+        'data-image-gallery': 'true',
+        style: 'width: 100%; margin: 1rem 0;',
+      }),
+      ...images.map((src: string) => [
+        'img',
+        {
+          src,
+          style: 'width: 100%; height: auto; border-radius: 0.5rem;',
+        },
+      ]),
+    ]
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(ImageGalleryNode)
+  },
+
+  addCommands() {
+    return {
+      setImageGallery:
+        (options: { images: string[] }) =>
+        ({ commands }) => {
+          return commands.insertContent({
+            type: this.name,
+            attrs: options,
+          })
+        },
+    }
+  },
+})
+
 // Type declarations for custom commands
 declare module '@tiptap/react' {
   interface Commands<ReturnType> {
@@ -290,6 +359,9 @@ declare module '@tiptap/react' {
     }
     spotifyEmbed: {
       setSpotifyEmbed: (options: { spotifyUri: string }) => ReturnType
+    }
+    imageGallery: {
+      setImageGallery: (options: { images: string[] }) => ReturnType
     }
   }
 }

@@ -5,7 +5,7 @@ import Link from '@tiptap/extension-link'
 import Underline from '@tiptap/extension-underline'
 import Placeholder from '@tiptap/extension-placeholder'
 import type { JSONContent } from '@tiptap/react'
-import { CustomImage, Video, Audio, SpotifyEmbed } from '../lib/extensions'
+import { CustomImage, Video, Audio, SpotifyEmbed, ImageGallery } from '../lib/extensions'
 import { compressVideoIfNeeded, isVideoFile, getFileSizeMB, MAX_SIZE_MB } from '../lib/videoCompression'
 import { searchSongs, getSpotifyUrl, extractSpotifyUrl, buildSpotifySearchUrl, type SongResult } from '../lib/musicSearch'
 import { useDebouncedCallback } from 'use-debounce'
@@ -40,6 +40,7 @@ export default function Editor() {
   const editorContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const filesInputRef = useRef<HTMLInputElement>(null)
+  const albumInputRef = useRef<HTMLInputElement>(null)
   const cameraPhotoInputRef = useRef<HTMLInputElement>(null)
   const cameraVideoInputRef = useRef<HTMLInputElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -85,6 +86,7 @@ export default function Editor() {
       Video,
       Audio,
       SpotifyEmbed,
+      ImageGallery,
       Placeholder.configure({
         placeholder: 'Start typing your message...',
       }),
@@ -254,6 +256,49 @@ export default function Editor() {
     // Reset input so the same file can be selected again
     e.target.value = ''
   }, [handleFileDrop])
+
+  // Handle album selection - upload multiple images and create a gallery
+  const handleAlbumSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files?.length || !editor) {
+      e.target.value = ''
+      return
+    }
+
+    // Filter to only images
+    const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'))
+    
+    if (imageFiles.length === 0) {
+      e.target.value = ''
+      return
+    }
+
+    // If only one image, use regular image insert
+    if (imageFiles.length === 1) {
+      handleFileDrop(files)
+      e.target.value = ''
+      return
+    }
+
+    // Upload all images
+    const uploadedUrls: string[] = []
+    for (const file of imageFiles) {
+      const url = await uploadMedia(file)
+      if (url) {
+        uploadedUrls.push(url)
+      }
+    }
+
+    // Insert as gallery if we have multiple images
+    if (uploadedUrls.length > 1) {
+      editor.chain().focus().setImageGallery({ images: uploadedUrls }).run()
+    } else if (uploadedUrls.length === 1) {
+      editor.chain().focus().setImage({ src: uploadedUrls[0] }).run()
+    }
+
+    // Reset input
+    e.target.value = ''
+  }, [editor, uploadMedia, handleFileDrop])
 
   // Load initial content
   useEffect(() => {
@@ -582,6 +627,14 @@ export default function Editor() {
         className="hidden"
         onChange={handleFileSelect}
       />
+      <input
+        ref={albumInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={handleAlbumSelect}
+      />
 
       {/* Compression progress overlay */}
       {isCompressing && (
@@ -901,6 +954,21 @@ export default function Editor() {
                 <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
               </svg>
               <span className="text-dark-text">Photo Library</span>
+            </button>
+            <button
+              onClick={() => {
+                albumInputRef.current?.click()
+                setShowMediaMenu(false)
+              }}
+              className="w-full px-4 py-3 flex items-center gap-3 hover:bg-dark-border/50 transition-colors text-left"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-dark-muted">
+                <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+                <rect width="18" height="18" x="5" y="5" rx="2" ry="2"/>
+                <circle cx="11" cy="11" r="2"/>
+                <path d="m21 17-3.086-3.086a2 2 0 0 0-2.828 0L8 21"/>
+              </svg>
+              <span className="text-dark-text">Photo Album</span>
             </button>
             <button
               onClick={() => {

@@ -173,8 +173,53 @@ body {
 /* Media node wrappers */
 .image-node-wrapper,
 .video-node-wrapper,
-.spotify-node-wrapper {
+.spotify-node-wrapper,
+.image-gallery-node-wrapper {
   @apply my-4;
+}
+
+/* Image Gallery / Carousel styles */
+.image-gallery-container {
+  @apply relative w-full;
+}
+
+.image-gallery-scroll {
+  @apply flex overflow-x-auto snap-x snap-mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.image-gallery-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.image-gallery-item {
+  @apply flex-shrink-0 w-full snap-center;
+}
+
+.image-gallery-image {
+  @apply w-full h-auto rounded-lg object-cover;
+  max-height: 70vh;
+}
+
+.image-gallery-dots {
+  @apply flex justify-center gap-1.5 mt-3;
+}
+
+.image-gallery-dot {
+  @apply w-2 h-2 rounded-full bg-gray-300 transition-all duration-200;
+}
+
+.image-gallery-dot.active {
+  @apply bg-gray-700 w-2.5 h-2.5;
+}
+
+.image-gallery-counter {
+  @apply absolute top-3 right-3 px-2 py-1 text-xs font-medium rounded-full;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
 }
 
 /* Spotify embed container with touch overlay */

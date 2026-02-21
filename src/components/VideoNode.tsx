@@ -66,6 +66,8 @@ export function VideoNode({ node, updateAttributes, editor, getPos }: NodeViewPr
           controls
           playsInline
           preload="metadata"
+          autoPlay={false}
+          loop={false}
           className="w-full h-auto rounded-lg"
           style={{ objectFit: 'contain' }}
         />
