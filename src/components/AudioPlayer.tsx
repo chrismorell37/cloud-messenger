@@ -1,10 +1,10 @@
 import { NodeViewWrapper } from '@tiptap/react'
 import type { NodeViewProps } from '@tiptap/react'
-import { useRef } from 'react'
+import { useRef, useCallback } from 'react'
 import { MediaWrapper, type Reply } from './MediaWrapper'
 import { useEditorStore } from '../stores/editorStore'
 
-export function AudioPlayer({ node, updateAttributes, deleteNode }: NodeViewProps) {
+export function AudioPlayer({ node, updateAttributes, editor, getPos }: NodeViewProps) {
   const audioRef = useRef<HTMLAudioElement>(null)
   const { src, played, reactions = {}, replies = [] } = node.attrs
   const { user } = useEditorStore()
@@ -50,6 +50,13 @@ export function AudioPlayer({ node, updateAttributes, deleteNode }: NodeViewProp
     updateAttributes({ replies: [...replies, newReply] })
   }
 
+  const handleDelete = useCallback(() => {
+    const pos = getPos()
+    if (typeof pos === 'number' && editor) {
+      editor.chain().focus().deleteRange({ from: pos, to: pos + node.nodeSize }).run()
+    }
+  }, [editor, getPos, node.nodeSize])
+
   return (
     <NodeViewWrapper className="audio-player-wrapper">
       <MediaWrapper
@@ -57,7 +64,7 @@ export function AudioPlayer({ node, updateAttributes, deleteNode }: NodeViewProp
         replies={replies}
         onAddReaction={handleAddReaction}
         onRemoveReaction={handleRemoveReaction}
-        onDelete={deleteNode}
+        onDelete={handleDelete}
         onReply={handleReply}
         userId={userId}
       >

@@ -177,22 +177,25 @@ body {
   @apply my-4;
 }
 
-/* Reactions display */
+/* Reactions display - overlapping bottom-left of media */
 .media-reactions {
-  @apply flex flex-wrap gap-1.5 mt-2;
+  @apply absolute bottom-2 left-2 flex flex-wrap gap-1 z-10;
 }
 
 .reaction-badge {
-  @apply flex items-center gap-1 px-2 py-1 bg-dark-surface rounded-full
-         border border-dark-border hover:bg-dark-border transition-colors;
+  @apply flex items-center gap-0.5 px-2 py-1 rounded-full
+         shadow-lg backdrop-blur-sm transition-all;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .reaction-badge-mine {
-  @apply bg-dark-accent/20 border-dark-accent;
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.5);
 }
 
 .reaction-emoji {
-  @apply text-base leading-none;
+  @apply text-lg leading-none;
 }
 
 .reaction-count {

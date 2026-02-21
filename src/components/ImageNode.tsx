@@ -1,9 +1,10 @@
 import { NodeViewWrapper } from '@tiptap/react'
 import type { NodeViewProps } from '@tiptap/react'
+import { useCallback } from 'react'
 import { MediaWrapper, type Reply } from './MediaWrapper'
 import { useEditorStore } from '../stores/editorStore'
 
-export function ImageNode({ node, updateAttributes, deleteNode }: NodeViewProps) {
+export function ImageNode({ node, updateAttributes, editor, getPos }: NodeViewProps) {
   const { src, reactions = {}, replies = [] } = node.attrs
   const { user } = useEditorStore()
   const userId = user?.id || 'anonymous'
@@ -42,6 +43,13 @@ export function ImageNode({ node, updateAttributes, deleteNode }: NodeViewProps)
     updateAttributes({ replies: [...replies, newReply] })
   }
 
+  const handleDelete = useCallback(() => {
+    const pos = getPos()
+    if (typeof pos === 'number' && editor) {
+      editor.chain().focus().deleteRange({ from: pos, to: pos + node.nodeSize }).run()
+    }
+  }, [editor, getPos, node.nodeSize])
+
   return (
     <NodeViewWrapper className="image-node-wrapper">
       <MediaWrapper
@@ -49,7 +57,7 @@ export function ImageNode({ node, updateAttributes, deleteNode }: NodeViewProps)
         replies={replies}
         onAddReaction={handleAddReaction}
         onRemoveReaction={handleRemoveReaction}
-        onDelete={deleteNode}
+        onDelete={handleDelete}
         onReply={handleReply}
         userId={userId}
       >

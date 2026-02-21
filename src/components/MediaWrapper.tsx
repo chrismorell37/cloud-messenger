@@ -143,25 +143,28 @@ export function MediaWrapper({
         onContextMenu={handleContextMenu}
       >
         {children}
+        
+        {/* Reactions display - overlapping bottom-left of media */}
+        {reactionEntries.length > 0 && (
+          <div className="media-reactions">
+            {reactionEntries.map(([emoji, userIds]) => (
+              <button
+                key={emoji}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleReactionSelect(emoji)
+                }}
+                className={`reaction-badge ${userIds.includes(userId) ? 'reaction-badge-mine' : ''}`}
+              >
+                <span className="reaction-emoji">{emoji}</span>
+                {userIds.length > 1 && (
+                  <span className="reaction-count">{userIds.length}</span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-
-      {/* Reactions display */}
-      {reactionEntries.length > 0 && (
-        <div className="media-reactions">
-          {reactionEntries.map(([emoji, userIds]) => (
-            <button
-              key={emoji}
-              onClick={() => handleReactionSelect(emoji)}
-              className={`reaction-badge ${userIds.includes(userId) ? 'reaction-badge-mine' : ''}`}
-            >
-              <span className="reaction-emoji">{emoji}</span>
-              {userIds.length > 1 && (
-                <span className="reaction-count">{userIds.length}</span>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* Thread replies */}
       {replies.length > 0 && (
