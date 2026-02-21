@@ -334,17 +334,20 @@ body {
   @apply fixed z-50 bg-dark-surface/95 backdrop-blur-xl rounded-2xl shadow-2xl
          border border-dark-border overflow-hidden;
   min-width: 260px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   animation: context-menu-appear 0.2s ease-out;
 }
 
 @keyframes context-menu-appear {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: translate(-50%, -50%) scale(0.95);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 

@@ -40,7 +40,6 @@ export function MediaWrapper({
   userId,
 }: MediaWrapperProps) {
   const [showContextMenu, setShowContextMenu] = useState(false)
-  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 })
   const [showReplyInput, setShowReplyInput] = useState(false)
   const [replyText, setReplyText] = useState('')
   const [isThreadExpanded, setIsThreadExpanded] = useState(false)
@@ -68,7 +67,6 @@ export function MediaWrapper({
     longPressTimerRef.current = setTimeout(() => {
       isLongPressRef.current = true
       setIsPressing(true)
-      setMenuPosition({ x: touch.clientX, y: touch.clientY })
       setShowContextMenu(true)
       // Haptic feedback
       if (navigator.vibrate) {
@@ -118,7 +116,6 @@ export function MediaWrapper({
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
-    setMenuPosition({ x: e.clientX, y: e.clientY })
     setShowContextMenu(true)
   }, [])
 
@@ -250,7 +247,6 @@ export function MediaWrapper({
       {/* Context menu */}
       {showContextMenu && (
         <MediaContextMenu
-          position={menuPosition}
           reactions={reactions}
           userId={userId}
           onReactionSelect={handleReactionSelect}

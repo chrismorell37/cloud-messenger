@@ -3,7 +3,6 @@ import { useEffect, useRef, useCallback } from 'react'
 const PRESET_EMOJIS = ['🩵', '🥹', '🤣', '🩷', '❤️‍🔥', '🫣']
 
 interface MediaContextMenuProps {
-  position: { x: number; y: number }
   reactions: Record<string, string[]>
   userId: string
   onReactionSelect: (emoji: string) => void
@@ -13,7 +12,6 @@ interface MediaContextMenuProps {
 }
 
 export function MediaContextMenu({
-  position,
   reactions,
   userId,
   onReactionSelect,
@@ -56,12 +54,6 @@ export function MediaContextMenu({
     }
   }, [onClose, handleClose])
 
-  // Adjust position to stay within viewport
-  const adjustedPosition = {
-    x: Math.min(position.x, window.innerWidth - 280),
-    y: Math.min(position.y, window.innerHeight - 200),
-  }
-
   return (
     <>
       {/* Backdrop - only close on explicit tap, not on touch end */}
@@ -71,14 +63,10 @@ export function MediaContextMenu({
         onTouchStart={handleClose}
       />
       
-      {/* Menu */}
+      {/* Menu - centered on screen */}
       <div
         ref={menuRef}
         className="context-menu"
-        style={{
-          left: adjustedPosition.x,
-          top: adjustedPosition.y,
-        }}
       >
         {/* Emoji reactions row */}
         <div className="context-menu-emojis">
