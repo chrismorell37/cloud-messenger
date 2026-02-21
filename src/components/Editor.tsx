@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 import Underline from '@tiptap/extension-underline'
@@ -30,7 +30,7 @@ export default function Editor() {
   const [isLoadingSpotify, setIsLoadingSpotify] = useState(false)
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
-  const [toolbarBottom, setToolbarBottom] = useState(0)
+  const [floatingButtonsTop, setFloatingButtonsTop] = useState(0)
   const [showDraftsMenu, setShowDraftsMenu] = useState(false)
   const { isSaving, hasUnsavedChanges, lastSavedAt, otherUserPresence } = useEditorStore()
   const { triggerSave, forceSave } = useAutosave()
@@ -457,11 +457,10 @@ export default function Editor() {
     if (!viewport) return
 
     const updatePosition = () => {
-      // Position toolbar at the bottom of the visual viewport
-      // This works by calculating the TOP position based on viewport
-      const toolbarHeight = 44 // h-11 = 44px
-      const top = viewport.offsetTop + viewport.height - toolbarHeight
-      setToolbarBottom(top)
+      // Position floating buttons above the keyboard
+      const padding = 100 // Space from bottom of viewport
+      const top = viewport.offsetTop + viewport.height - padding
+      setFloatingButtonsTop(top)
     }
 
     viewport.addEventListener('resize', updatePosition)
@@ -592,6 +591,62 @@ export default function Editor() {
           editor={editor} 
           className="prose prose-invert max-w-none"
         />
+
+        {/* Selection-based formatting bubble menu */}
+        {editor && (
+          <BubbleMenu 
+            editor={editor} 
+            tippyOptions={{ 
+              duration: 100,
+              placement: 'top',
+            }}
+            className="flex items-center gap-1 px-2 py-1.5 bg-dark-surface border border-dark-border rounded-lg shadow-xl"
+          >
+            <button
+              onClick={() => editor.chain().focus().toggleBold().run()}
+              className={`w-8 h-8 rounded flex items-center justify-center transition-colors
+                         ${editor.isActive('bold') ? 'bg-dark-accent text-white' : 'text-dark-text hover:bg-dark-border'}`}
+              aria-label="Bold"
+            >
+              <span className="font-bold text-sm">B</span>
+            </button>
+            <button
+              onClick={() => editor.chain().focus().toggleItalic().run()}
+              className={`w-8 h-8 rounded flex items-center justify-center transition-colors
+                         ${editor.isActive('italic') ? 'bg-dark-accent text-white' : 'text-dark-text hover:bg-dark-border'}`}
+              aria-label="Italic"
+            >
+              <span className="italic text-sm">I</span>
+            </button>
+            <button
+              onClick={() => editor.chain().focus().toggleUnderline().run()}
+              className={`w-8 h-8 rounded flex items-center justify-center transition-colors
+                         ${editor.isActive('underline') ? 'bg-dark-accent text-white' : 'text-dark-text hover:bg-dark-border'}`}
+              aria-label="Underline"
+            >
+              <span className="underline text-sm">U</span>
+            </button>
+            <div className="w-px h-5 bg-dark-border mx-1" />
+            <button
+              onClick={() => {
+                if (editor.isActive('link')) {
+                  editor.chain().focus().unsetLink().run()
+                } else {
+                  setLinkUrl('')
+                  setShowLinkModal(true)
+                }
+              }}
+              className={`w-8 h-8 rounded flex items-center justify-center transition-colors
+                         ${editor.isActive('link') ? 'bg-dark-accent text-white' : 'text-dark-text hover:bg-dark-border'}`}
+              aria-label="Link"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+              </svg>
+            </button>
+          </BubbleMenu>
+        )}
       </div>
 
       {/* Hidden file inputs */}
@@ -774,7 +829,7 @@ export default function Editor() {
       {/* Floating buttons */}
       <div 
         className="fixed right-6 flex flex-col gap-3 z-30"
-        style={{ top: toolbarBottom - 140, bottom: 'auto' }}
+        style={{ top: floatingButtonsTop, bottom: 'auto' }}
       >
         {/* Voice recording button with drafts */}
         <div className="relative">
@@ -1026,55 +1081,6 @@ export default function Editor() {
           >
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Text formatting toolbar */}
-      <div 
-        className="fixed left-0 right-0 h-11 bg-dark-surface border-t border-dark-border flex items-center justify-center gap-1 px-4 z-20"
-        style={{ top: toolbarBottom, bottom: 'auto' }}
-      >
-        <button
-          onClick={() => editor?.chain().focus().toggleBold().run()}
-          className={`w-10 h-9 rounded-md flex items-center justify-center transition-colors
-                     ${editor?.isActive('bold') ? 'bg-dark-accent text-white' : 'text-dark-text hover:bg-dark-border'}`}
-          aria-label="Bold"
-        >
-          <span className="font-bold text-base">B</span>
-        </button>
-        <button
-          onClick={() => editor?.chain().focus().toggleItalic().run()}
-          className={`w-10 h-9 rounded-md flex items-center justify-center transition-colors
-                     ${editor?.isActive('italic') ? 'bg-dark-accent text-white' : 'text-dark-text hover:bg-dark-border'}`}
-          aria-label="Italic"
-        >
-          <span className="italic text-base">I</span>
-        </button>
-        <button
-          onClick={() => editor?.chain().focus().toggleUnderline().run()}
-          className={`w-10 h-9 rounded-md flex items-center justify-center transition-colors
-                     ${editor?.isActive('underline') ? 'bg-dark-accent text-white' : 'text-dark-text hover:bg-dark-border'}`}
-          aria-label="Underline"
-        >
-          <span className="underline text-base">U</span>
-        </button>
-        <button
-          onClick={() => {
-            if (editor?.isActive('link')) {
-              editor.chain().focus().unsetLink().run()
-            } else {
-              setLinkUrl('')
-              setShowLinkModal(true)
-            }
-          }}
-          className={`w-10 h-9 rounded-md flex items-center justify-center transition-colors
-                     ${editor?.isActive('link') ? 'bg-dark-accent text-white' : 'text-dark-text hover:bg-dark-border'}`}
-          aria-label="Link"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
           </svg>
         </button>
       </div>
