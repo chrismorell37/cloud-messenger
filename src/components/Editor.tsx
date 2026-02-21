@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react'
+import { useEditor, EditorContent } from '@tiptap/react'
+import { BubbleMenu } from '@tiptap/react/menus'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 import Underline from '@tiptap/extension-underline'
@@ -595,11 +596,7 @@ export default function Editor() {
         {/* Selection-based formatting bubble menu */}
         {editor && (
           <BubbleMenu 
-            editor={editor} 
-            tippyOptions={{ 
-              duration: 100,
-              placement: 'top',
-            }}
+            editor={editor}
             className="flex items-center gap-1 px-2 py-1.5 bg-dark-surface border border-dark-border rounded-lg shadow-xl"
           >
             <button
