@@ -26,7 +26,13 @@
 
 /* Base styles */
 html {
-  color-scheme: light dark;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  html {
+    color-scheme: dark;
+  }
 }
 
 body {
