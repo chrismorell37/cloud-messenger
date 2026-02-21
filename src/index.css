@@ -233,14 +233,9 @@ body {
   color: white;
 }
 
-/* Spotify embed container with touch overlay */
+/* Spotify embed container */
 .spotify-embed-container {
   @apply relative;
-}
-
-.spotify-touch-overlay {
-  @apply absolute inset-0 z-10;
-  background: transparent;
 }
 
 /* Reactions display - overlapping bottom-left of media */

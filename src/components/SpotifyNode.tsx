@@ -83,10 +83,8 @@ export function SpotifyNode({ node, updateAttributes, editor, getPos }: NodeView
             frameBorder="0"
             allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
             loading="lazy"
-            style={{ borderRadius: '12px', pointerEvents: 'auto' }}
+            style={{ borderRadius: '12px' }}
           />
-          {/* Invisible overlay to capture touch events for long-press/double-tap */}
-          <div className="spotify-touch-overlay" />
         </div>
       </MediaWrapper>
     </NodeViewWrapper>
