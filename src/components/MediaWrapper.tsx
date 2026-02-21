@@ -226,6 +226,12 @@ export function MediaWrapper({
             placeholder="Write a reply..."
             className="reply-input"
             autoFocus
+            onBlur={() => {
+              if (!replyText.trim()) {
+                setShowReplyInput(false)
+                setReplyText('')
+              }
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 handleReplySubmit()
