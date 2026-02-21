@@ -27,7 +27,6 @@ interface MediaWrapperProps {
 
 const DOUBLE_TAP_DELAY = 300
 const LONG_PRESS_DELAY = 800
-const WIGGLE_DELAY = 300
 const DEFAULT_REACTION = '🩵'
 
 export function MediaWrapper({
@@ -49,7 +48,6 @@ export function MediaWrapper({
   
   const lastTapRef = useRef<number>(0)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const wiggleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchStartRef = useRef<{ x: number; y: number } | null>(null)
   const isLongPressRef = useRef(false)
 
@@ -57,10 +55,6 @@ export function MediaWrapper({
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current)
       longPressTimerRef.current = null
-    }
-    if (wiggleTimerRef.current) {
-      clearTimeout(wiggleTimerRef.current)
-      wiggleTimerRef.current = null
     }
     setIsPressing(false)
   }, [])
@@ -70,21 +64,18 @@ export function MediaWrapper({
     touchStartRef.current = { x: touch.clientX, y: touch.clientY }
     isLongPressRef.current = false
 
-    // Start wiggle animation after WIGGLE_DELAY
-    wiggleTimerRef.current = setTimeout(() => {
-      setIsPressing(true)
-    }, WIGGLE_DELAY)
-
-    // Show menu after LONG_PRESS_DELAY
+    // Show menu with wiggle after LONG_PRESS_DELAY
     longPressTimerRef.current = setTimeout(() => {
       isLongPressRef.current = true
-      setIsPressing(false)
+      setIsPressing(true)
       setMenuPosition({ x: touch.clientX, y: touch.clientY })
       setShowContextMenu(true)
       // Haptic feedback
       if (navigator.vibrate) {
         navigator.vibrate(10)
       }
+      // Reset wiggle animation after it plays
+      setTimeout(() => setIsPressing(false), 150)
     }, LONG_PRESS_DELAY)
   }, [])
 
