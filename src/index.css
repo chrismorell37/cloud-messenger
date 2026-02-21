@@ -168,6 +168,17 @@ body {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
+  transition: transform 0.15s ease-out;
+}
+
+.media-content.pressing {
+  animation: media-wiggle 0.15s ease-in-out;
+}
+
+@keyframes media-wiggle {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.97); }
+  100% { transform: scale(0.97); }
 }
 
 /* Media node wrappers */

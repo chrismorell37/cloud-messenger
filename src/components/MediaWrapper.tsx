@@ -26,7 +26,8 @@ interface MediaWrapperProps {
 }
 
 const DOUBLE_TAP_DELAY = 300
-const LONG_PRESS_DELAY = 500
+const LONG_PRESS_DELAY = 800
+const WIGGLE_DELAY = 300
 const DEFAULT_REACTION = '🩵'
 
 export function MediaWrapper({
@@ -44,17 +45,24 @@ export function MediaWrapper({
   const [showReplyInput, setShowReplyInput] = useState(false)
   const [replyText, setReplyText] = useState('')
   const [isThreadExpanded, setIsThreadExpanded] = useState(false)
+  const [isPressing, setIsPressing] = useState(false)
   
   const lastTapRef = useRef<number>(0)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const wiggleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchStartRef = useRef<{ x: number; y: number } | null>(null)
   const isLongPressRef = useRef(false)
 
-  const clearLongPressTimer = useCallback(() => {
+  const clearAllTimers = useCallback(() => {
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current)
       longPressTimerRef.current = null
     }
+    if (wiggleTimerRef.current) {
+      clearTimeout(wiggleTimerRef.current)
+      wiggleTimerRef.current = null
+    }
+    setIsPressing(false)
   }, [])
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -62,10 +70,21 @@ export function MediaWrapper({
     touchStartRef.current = { x: touch.clientX, y: touch.clientY }
     isLongPressRef.current = false
 
+    // Start wiggle animation after WIGGLE_DELAY
+    wiggleTimerRef.current = setTimeout(() => {
+      setIsPressing(true)
+    }, WIGGLE_DELAY)
+
+    // Show menu after LONG_PRESS_DELAY
     longPressTimerRef.current = setTimeout(() => {
       isLongPressRef.current = true
+      setIsPressing(false)
       setMenuPosition({ x: touch.clientX, y: touch.clientY })
       setShowContextMenu(true)
+      // Haptic feedback
+      if (navigator.vibrate) {
+        navigator.vibrate(10)
+      }
     }, LONG_PRESS_DELAY)
   }, [])
 
@@ -77,12 +96,12 @@ export function MediaWrapper({
     const dy = Math.abs(touch.clientY - touchStartRef.current.y)
     
     if (dx > 10 || dy > 10) {
-      clearLongPressTimer()
+      clearAllTimers()
     }
-  }, [clearLongPressTimer])
+  }, [clearAllTimers])
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    clearLongPressTimer()
+    clearAllTimers()
     
     if (isLongPressRef.current) {
       e.preventDefault()
@@ -104,7 +123,7 @@ export function MediaWrapper({
     } else {
       lastTapRef.current = now
     }
-  }, [reactions, userId, onAddReaction, onRemoveReaction, clearLongPressTimer])
+  }, [reactions, userId, onAddReaction, onRemoveReaction, clearAllTimers])
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
@@ -136,7 +155,7 @@ export function MediaWrapper({
   return (
     <div className="media-wrapper">
       <div
-        className="media-content"
+        className={`media-content ${isPressing ? 'pressing' : ''}`}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
