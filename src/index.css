@@ -177,6 +177,16 @@ body {
   @apply my-4;
 }
 
+/* Spotify embed container with touch overlay */
+.spotify-embed-container {
+  @apply relative;
+}
+
+.spotify-touch-overlay {
+  @apply absolute inset-0 z-10;
+  background: transparent;
+}
+
 /* Reactions display - overlapping bottom-left of media */
 .media-reactions {
   @apply absolute bottom-2 left-2 flex flex-wrap gap-1 z-10;

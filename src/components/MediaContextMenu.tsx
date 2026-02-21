@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 
 const PRESET_EMOJIS = ['🩵', '🥹', '🤣', '🩷', '❤️‍🔥', '🫣']
 
@@ -22,22 +22,20 @@ export function MediaContextMenu({
   onClose,
 }: MediaContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
-  const [isActive, setIsActive] = useState(false)
+  const openedAtRef = useRef<number>(Date.now())
+  
+  const handleClose = useCallback(() => {
+    // Ignore close events within 400ms of opening (to handle long press release)
+    if (Date.now() - openedAtRef.current < 400) {
+      return
+    }
+    onClose()
+  }, [onClose])
 
-  // Delay activation to prevent immediate close from the touch that opened the menu
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsActive(true)
-    }, 100)
-    return () => clearTimeout(timer)
-  }, [])
-
-  useEffect(() => {
-    if (!isActive) return
-
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        onClose()
+        handleClose()
       }
     }
 
@@ -56,7 +54,7 @@ export function MediaContextMenu({
       document.removeEventListener('touchstart', handleClickOutside)
       document.removeEventListener('keydown', handleEscape)
     }
-  }, [onClose, isActive])
+  }, [onClose, handleClose])
 
   // Adjust position to stay within viewport
   const adjustedPosition = {
@@ -66,11 +64,11 @@ export function MediaContextMenu({
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop - only close on explicit tap, not on touch end */}
       <div 
         className="context-menu-backdrop" 
-        onClick={() => isActive && onClose()}
-        onTouchEnd={() => isActive && onClose()}
+        onClick={handleClose}
+        onTouchStart={handleClose}
       />
       
       {/* Menu */}

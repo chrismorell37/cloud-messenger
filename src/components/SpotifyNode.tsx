@@ -75,15 +75,19 @@ export function SpotifyNode({ node, updateAttributes, editor, getPos }: NodeView
         onReply={handleReply}
         userId={userId}
       >
-        <iframe
-          src={embedUrl}
-          width="100%"
-          height="80"
-          frameBorder="0"
-          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-          loading="lazy"
-          style={{ borderRadius: '12px' }}
-        />
+        <div className="spotify-embed-container">
+          <iframe
+            src={embedUrl}
+            width="100%"
+            height="80"
+            frameBorder="0"
+            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+            loading="lazy"
+            style={{ borderRadius: '12px', pointerEvents: 'auto' }}
+          />
+          {/* Invisible overlay to capture touch events for long-press/double-tap */}
+          <div className="spotify-touch-overlay" />
+        </div>
       </MediaWrapper>
     </NodeViewWrapper>
   )
