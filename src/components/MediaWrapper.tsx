@@ -24,7 +24,7 @@ interface MediaWrapperProps {
   onReply: (text: string) => void
   userId: string
   mediaUrl?: string
-  onTap?: () => void
+  onDoubleTap?: () => void
 }
 
 const DOUBLE_TAP_DELAY = 300
@@ -41,7 +41,7 @@ export function MediaWrapper({
   onReply,
   userId,
   mediaUrl,
-  onTap,
+  onDoubleTap,
 }: MediaWrapperProps) {
   const [showContextMenu, setShowContextMenu] = useState(false)
   const [showReplyInput, setShowReplyInput] = useState(false)
@@ -51,7 +51,6 @@ export function MediaWrapper({
   
   const lastTapRef = useRef<number>(0)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const singleTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchStartRef = useRef<{ x: number; y: number } | null>(null)
   const isLongPressRef = useRef(false)
 
@@ -59,10 +58,6 @@ export function MediaWrapper({
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current)
       longPressTimerRef.current = null
-    }
-    if (singleTapTimerRef.current) {
-      clearTimeout(singleTapTimerRef.current)
-      singleTapTimerRef.current = null
     }
     setIsPressing(false)
   }, [])
@@ -110,30 +105,26 @@ export function MediaWrapper({
     const timeSinceLastTap = now - lastTapRef.current
     
     if (timeSinceLastTap < DOUBLE_TAP_DELAY) {
-      // Double tap - toggle heart reaction
+      // Double tap detected
       e.preventDefault()
-      if (singleTapTimerRef.current) {
-        clearTimeout(singleTapTimerRef.current)
-        singleTapTimerRef.current = null
-      }
-      const hasReacted = reactions[DEFAULT_REACTION]?.includes(userId)
-      if (hasReacted) {
-        onRemoveReaction(DEFAULT_REACTION)
+      if (onDoubleTap) {
+        // Custom double-tap action (e.g., open lightbox for photos)
+        onDoubleTap()
       } else {
-        onAddReaction(DEFAULT_REACTION)
+        // Default: toggle heart reaction
+        const hasReacted = reactions[DEFAULT_REACTION]?.includes(userId)
+        if (hasReacted) {
+          onRemoveReaction(DEFAULT_REACTION)
+        } else {
+          onAddReaction(DEFAULT_REACTION)
+        }
       }
       lastTapRef.current = 0
     } else {
-      // First tap - wait to see if it's a double tap
+      // First tap - record time for double-tap detection
       lastTapRef.current = now
-      if (onTap) {
-        singleTapTimerRef.current = setTimeout(() => {
-          onTap()
-          singleTapTimerRef.current = null
-        }, DOUBLE_TAP_DELAY)
-      }
     }
-  }, [reactions, userId, onAddReaction, onRemoveReaction, clearAllTimers, onTap])
+  }, [reactions, userId, onAddReaction, onRemoveReaction, clearAllTimers, onDoubleTap])
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault()

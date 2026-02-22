@@ -53,7 +53,7 @@ export function ImageGalleryNode({ node, updateAttributes, editor, getPos }: Nod
     }
   }, [editor, getPos, node.nodeSize])
 
-  const handleTap = useCallback(() => {
+  const handleDoubleTap = useCallback(() => {
     if (images[currentIndex]) {
       setLightboxImage(images[currentIndex])
     }
@@ -102,7 +102,7 @@ export function ImageGalleryNode({ node, updateAttributes, editor, getPos }: Nod
         onReply={handleReply}
         userId={userId}
         mediaUrl={images[currentIndex]}
-        onTap={handleTap}
+        onDoubleTap={handleDoubleTap}
       >
         <div className="image-gallery-container">
           <div 

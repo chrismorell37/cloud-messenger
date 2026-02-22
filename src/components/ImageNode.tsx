@@ -50,7 +50,7 @@ export function ImageNode({ node, updateAttributes, editor, getPos }: NodeViewPr
     }
   }, [editor, getPos, node.nodeSize])
 
-  const handleTap = useCallback(() => {
+  const handleDoubleTap = useCallback(() => {
     setLightboxImage(src)
   }, [src, setLightboxImage])
 
@@ -65,7 +65,7 @@ export function ImageNode({ node, updateAttributes, editor, getPos }: NodeViewPr
         onReply={handleReply}
         userId={userId}
         mediaUrl={src}
-        onTap={handleTap}
+        onDoubleTap={handleDoubleTap}
       >
         <img
           src={src}
