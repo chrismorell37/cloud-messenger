@@ -106,8 +106,58 @@ body {
 }
 
 .audio-new-badge {
-  @apply absolute -top-2 -right-2 bg-dark-accent text-white text-xs font-bold px-2 py-0.5 rounded-full z-10;
+  @apply absolute -top-2 -right-2 text-white text-xs font-bold px-2 py-0.5 rounded-full z-10;
+  background-color: var(--color-accent);
   animation: pulse-badge 2s ease-in-out infinite;
+}
+
+/* Audio transcription styles */
+.audio-transcription {
+  @apply mt-2;
+}
+
+.audio-transcription-loading {
+  @apply flex items-center gap-2 text-sm py-2;
+  color: var(--color-muted);
+}
+
+.audio-transcription-spinner {
+  @apply w-4 h-4 border-2 rounded-full animate-spin;
+  border-color: var(--color-muted);
+  border-top-color: var(--color-accent);
+}
+
+.audio-transcription-toggle {
+  @apply flex items-center gap-1.5 text-sm py-1 w-full text-left transition-colors;
+  color: var(--color-muted);
+}
+
+.audio-transcription-toggle:hover {
+  color: var(--color-text);
+}
+
+.audio-transcription-arrow {
+  @apply transition-transform duration-200 flex-shrink-0;
+}
+
+.audio-transcription-arrow.expanded {
+  @apply rotate-90;
+}
+
+.audio-transcription-preview {
+  @apply truncate;
+  font-style: italic;
+}
+
+.audio-transcription-text {
+  @apply text-sm py-2 pl-5 leading-relaxed;
+  color: var(--color-text);
+}
+
+.audio-transcription-error {
+  @apply text-sm py-1;
+  color: var(--color-muted);
+  font-style: italic;
 }
 
 @keyframes pulse-badge {

@@ -142,6 +142,7 @@ export const Audio = Node.create({
     return {
       src: { default: null },
       played: { default: false },
+      transcription: { default: null },
       ...mediaInteractionAttributes,
     }
   },
@@ -155,6 +156,7 @@ export const Audio = Node.create({
           return {
             src: node.getAttribute('src'),
             played: node.getAttribute('data-played') === 'true',
+            transcription: node.getAttribute('data-transcription') || null,
           }
         },
       },
