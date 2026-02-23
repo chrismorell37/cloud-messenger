@@ -32,11 +32,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const extMap: Record<string, string> = {
       'audio/webm': 'webm',
       'audio/mp4': 'm4a',
+      'audio/x-m4a': 'm4a',
+      'audio/m4a': 'm4a',
       'audio/mpeg': 'mp3',
       'audio/wav': 'wav',
       'audio/ogg': 'ogg',
+      'audio/aac': 'aac',
+      'audio/x-aac': 'aac',
     }
-    const ext = extMap[contentType] || 'webm'
+    let ext = extMap[contentType] || 'webm'
+    
+    // Fallback: try to get extension from URL if content-type is generic
+    if (ext === 'webm' && audioUrl.includes('.')) {
+      const urlExt = audioUrl.split('.').pop()?.split('?')[0]?.toLowerCase()
+      if (urlExt && ['m4a', 'mp3', 'wav', 'ogg', 'aac'].includes(urlExt)) {
+        ext = urlExt
+      }
+    }
 
     // Create FormData for OpenAI API
     const formData = new FormData()
