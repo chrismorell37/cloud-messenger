@@ -45,6 +45,7 @@ export default function Editor() {
   const albumInputRef = useRef<HTMLInputElement>(null)
   const cameraPhotoInputRef = useRef<HTMLInputElement>(null)
   const cameraVideoInputRef = useRef<HTMLInputElement>(null)
+  const voiceNoteInputRef = useRef<HTMLInputElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -688,6 +689,13 @@ export default function Editor() {
         className="hidden"
         onChange={handleAlbumSelect}
       />
+      <input
+        ref={voiceNoteInputRef}
+        type="file"
+        accept="audio/*,.m4a,.mp3,.wav,.aac,.ogg"
+        className="hidden"
+        onChange={handleFileSelect}
+      />
 
       {/* Compression progress overlay */}
       {isCompressing && (
@@ -902,6 +910,24 @@ export default function Editor() {
                   </svg>
                 </div>
                 <span className="text-dark-text font-medium">Record New</span>
+              </button>
+              
+              {/* Upload voice note button */}
+              <button
+                onClick={() => {
+                  voiceNoteInputRef.current?.click()
+                  setShowDraftsMenu(false)
+                }}
+                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-dark-border/50 transition-colors text-left border-t border-dark-border"
+              >
+                <div className="w-8 h-8 rounded-full bg-dark-border flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-dark-text">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                </div>
+                <span className="text-dark-text font-medium">Upload Voice Note</span>
               </button>
               
               {/* Pending drafts */}
