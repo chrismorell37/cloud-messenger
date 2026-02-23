@@ -101,6 +101,10 @@ body {
   @apply my-4;
 }
 
+.audio-player-wrapper .media-wrapper {
+  @apply mb-0;
+}
+
 .audio-player-wrapper .relative {
   @apply inline-block w-full;
 }
