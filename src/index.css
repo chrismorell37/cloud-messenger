@@ -113,7 +113,7 @@ body {
 
 /* Audio transcription styles */
 .audio-transcription {
-  @apply mt-1;
+  margin-top: 5px;
 }
 
 .audio-transcription-loading {
