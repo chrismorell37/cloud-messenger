@@ -113,7 +113,7 @@ body {
 
 /* Audio transcription styles */
 .audio-transcription {
-  @apply mt-2;
+  @apply mt-1;
 }
 
 .audio-transcription-loading {
@@ -128,7 +128,7 @@ body {
 }
 
 .audio-transcription-toggle {
-  @apply flex items-center gap-1.5 text-sm py-1 w-full text-left transition-colors;
+  @apply flex items-center gap-1.5 text-sm w-full text-left transition-colors;
   color: var(--color-muted);
 }
 
