@@ -102,11 +102,16 @@ body {
 }
 
 .audio-player-wrapper .media-wrapper {
-  @apply mb-0;
+  margin-bottom: 0;
 }
 
 .audio-player-wrapper .relative {
   @apply inline-block w-full;
+}
+
+.audio-player-wrapper audio {
+  margin: 0;
+  display: block;
 }
 
 .audio-new-badge {
