@@ -17,12 +17,21 @@ function getSpotifyEmbedUrl(spotifyUri: string): string {
   return ''
 }
 
+function getSpotifyContentType(spotifyUri: string): 'track' | 'playlist' | 'album' | 'other' {
+  if (spotifyUri.includes('/playlist/') || spotifyUri.includes(':playlist:')) return 'playlist'
+  if (spotifyUri.includes('/album/') || spotifyUri.includes(':album:')) return 'album'
+  if (spotifyUri.includes('/track/') || spotifyUri.includes(':track:')) return 'track'
+  return 'other'
+}
+
 export function SpotifyNode({ node, updateAttributes, editor, getPos }: NodeViewProps) {
   const { spotifyUri, reactions = {}, replies = [] } = node.attrs
   const { user } = useEditorStore()
   const userId = user?.id || 'anonymous'
   const userName = user?.email?.split('@')[0] || 'Anonymous'
   const embedUrl = getSpotifyEmbedUrl(spotifyUri || '')
+  const contentType = getSpotifyContentType(spotifyUri || '')
+  const embedHeight = contentType === 'playlist' || contentType === 'album' ? 352 : 80
 
   const handleAddReaction = (emoji: string) => {
     const currentReactions = { ...reactions }
@@ -79,7 +88,7 @@ export function SpotifyNode({ node, updateAttributes, editor, getPos }: NodeView
           <iframe
             src={embedUrl}
             width="100%"
-            height="80"
+            height={embedHeight}
             frameBorder="0"
             allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
             loading="lazy"
