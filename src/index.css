@@ -513,3 +513,52 @@ body {
          text-sm text-white/80 rounded-full transition-colors;
   background: rgba(255, 255, 255, 0.15);
 }
+
+/* Date Divider Styles */
+.date-divider {
+  @apply flex items-center gap-3 my-6 select-none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.date-divider-button {
+  @apply flex items-center gap-2 px-3 py-1.5 rounded-full
+         text-sm font-medium text-dark-muted
+         hover:bg-dark-border/50 active:scale-95
+         transition-all duration-200;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.date-divider-chevron {
+  @apply transition-transform duration-200;
+  transform: rotate(90deg);
+}
+
+.date-divider-chevron.expanded {
+  transform: rotate(-90deg);
+}
+
+.date-divider-text {
+  @apply text-dark-text font-medium;
+}
+
+.date-divider-line {
+  @apply flex-1 h-px;
+  background: var(--color-border);
+}
+
+/* Collapsed day section - hide following content */
+.date-divider.collapsed + .day-content {
+  display: none;
+}
+
+/* Day content wrapper for collapse functionality */
+.day-content {
+  @apply contents;
+}
+
+.day-content.hidden {
+  display: none;
+}

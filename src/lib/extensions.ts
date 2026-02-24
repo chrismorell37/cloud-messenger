@@ -5,6 +5,18 @@ import { VideoNode } from '../components/VideoNode'
 import { SpotifyNode } from '../components/SpotifyNode'
 import { ImageGalleryNode } from '../components/ImageGalleryNode'
 
+// Shared timestamp attribute for tracking when content was created
+const timestampAttribute = {
+  createdAt: {
+    default: null,
+    parseHTML: (element: HTMLElement) => element.getAttribute('data-created-at'),
+    renderHTML: (attributes: { createdAt?: string | null }) => {
+      if (!attributes.createdAt) return {}
+      return { 'data-created-at': attributes.createdAt }
+    },
+  },
+}
+
 // Shared attributes for reactions and replies
 const mediaInteractionAttributes = {
   reactions: {
@@ -33,6 +45,7 @@ const mediaInteractionAttributes = {
       return { 'data-replies': JSON.stringify(attributes.replies) }
     },
   },
+  ...timestampAttribute,
 }
 
 // Custom Image extension with reactions and replies

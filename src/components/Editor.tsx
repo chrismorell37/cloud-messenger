@@ -7,6 +7,7 @@ import Underline from '@tiptap/extension-underline'
 import Placeholder from '@tiptap/extension-placeholder'
 import type { JSONContent } from '@tiptap/react'
 import { CustomImage, Video, Audio, SpotifyEmbed, ImageGallery } from '../lib/extensions'
+import { DateDivider } from '../lib/dateDividerExtension'
 import { compressVideoIfNeeded, isVideoFile, getFileSizeMB, MAX_SIZE_MB } from '../lib/videoCompression'
 import { searchSongs, getSpotifyUrl, extractSpotifyUrl, buildSpotifySearchUrl, type SongResult } from '../lib/musicSearch'
 import { useDebouncedCallback } from 'use-debounce'
@@ -17,6 +18,61 @@ import { useDraftUpload } from '../hooks/useDraftUpload'
 import { useEditorStore } from '../stores/editorStore'
 import PresenceCursors from './PresenceCursors'
 import { PhotoLightbox } from './PhotoLightbox'
+
+function getDateKey(dateStr: string | null): string {
+  if (!dateStr) return 'unknown'
+  const date = new Date(dateStr)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+function processContentWithDateDividers(content: JSONContent): JSONContent {
+  if (!content || !content.content || !Array.isArray(content.content)) {
+    return content
+  }
+
+  const existingDividerDates = new Set<string>()
+  const mediaTypes = ['image', 'video', 'audio', 'spotifyEmbed', 'imageGallery']
+  
+  content.content.forEach(node => {
+    if (node.type === 'dateDivider' && node.attrs?.date) {
+      existingDividerDates.add(getDateKey(node.attrs.date))
+    }
+  })
+
+  const newContent: JSONContent[] = []
+  let lastDateKey: string | null = null
+  let hasAnyTimestampedContent = false
+
+  for (const node of content.content) {
+    if (node.type === 'dateDivider') {
+      newContent.push(node)
+      lastDateKey = node.attrs?.date ? getDateKey(node.attrs.date) : null
+      continue
+    }
+
+    if (mediaTypes.includes(node.type || '') && node.attrs?.createdAt) {
+      hasAnyTimestampedContent = true
+      const nodeDateKey = getDateKey(node.attrs.createdAt)
+      
+      if (nodeDateKey !== lastDateKey && !existingDividerDates.has(nodeDateKey)) {
+        newContent.push({
+          type: 'dateDivider',
+          attrs: { date: node.attrs.createdAt, collapsed: false }
+        })
+        existingDividerDates.add(nodeDateKey)
+      }
+      lastDateKey = nodeDateKey
+    }
+
+    newContent.push(node)
+  }
+
+  if (!hasAnyTimestampedContent) {
+    return content
+  }
+
+  return { ...content, content: newContent }
+}
 
 export default function Editor() {
   const [isLoading, setIsLoading] = useState(true)
@@ -90,6 +146,7 @@ export default function Editor() {
       Audio,
       SpotifyEmbed,
       ImageGallery,
+      DateDivider,
       Placeholder.configure({
         placeholder: 'Start typing your message...',
       }),
@@ -173,13 +230,14 @@ export default function Editor() {
       const url = await uploadMedia(file)
 
       if (url) {
-        // Remove placeholder and insert actual media
+        // Remove placeholder and insert actual media with timestamp
+        const createdAt = new Date().toISOString()
         if (isImage) {
-          editor.chain().focus().setImage({ src: url }).run()
+          editor.chain().focus().insertContent({ type: 'image', attrs: { src: url, createdAt } }).run()
         } else if (isVideo) {
-          editor.chain().focus().setVideo({ src: url }).run()
+          editor.chain().focus().insertContent({ type: 'video', attrs: { src: url, createdAt } }).run()
         } else if (isAudio) {
-          editor.chain().focus().setAudio({ src: url }).run()
+          editor.chain().focus().insertContent({ type: 'audio', attrs: { src: url, played: false, createdAt } }).run()
         }
       }
     }
@@ -188,7 +246,8 @@ export default function Editor() {
   // Handle Spotify URL paste - auto-embed
   const handleSpotifyUrlPaste = useCallback((spotifyUrl: string) => {
     if (!editor) return
-    editor.chain().focus().setSpotifyEmbed({ spotifyUri: spotifyUrl }).run()
+    const createdAt = new Date().toISOString()
+    editor.chain().focus().insertContent({ type: 'spotifyEmbed', attrs: { spotifyUri: spotifyUrl, createdAt } }).run()
   }, [editor])
 
   // Handle song search (debounced)
@@ -227,7 +286,8 @@ export default function Editor() {
     try {
       const result = await getSpotifyUrl(song.trackViewUrl)
       if (result.spotifyUrl) {
-        editor.chain().focus().setSpotifyEmbed({ spotifyUri: result.spotifyUrl }).run()
+        const createdAt = new Date().toISOString()
+        editor.chain().focus().insertContent({ type: 'spotifyEmbed', attrs: { spotifyUri: result.spotifyUrl, createdAt } }).run()
         setShowSongSearch(false)
         setSongSearchQuery('')
         setSongSearchResults([])
@@ -293,10 +353,11 @@ export default function Editor() {
     }
 
     // Insert as gallery if we have multiple images
+    const createdAt = new Date().toISOString()
     if (uploadedUrls.length > 1) {
-      editor.chain().focus().setImageGallery({ images: uploadedUrls }).run()
+      editor.chain().focus().insertContent({ type: 'imageGallery', attrs: { images: uploadedUrls, createdAt } }).run()
     } else if (uploadedUrls.length === 1) {
-      editor.chain().focus().setImage({ src: uploadedUrls[0] }).run()
+      editor.chain().focus().insertContent({ type: 'image', attrs: { src: uploadedUrls[0], createdAt } }).run()
     }
 
     // Reset input
@@ -308,7 +369,8 @@ export default function Editor() {
     const init = async () => {
       const content = await loadContent()
       if (content && editor) {
-        editor.commands.setContent(content)
+        const processedContent = processContentWithDateDividers(content)
+        editor.commands.setContent(processedContent)
       }
       setIsLoading(false)
     }
@@ -392,7 +454,8 @@ export default function Editor() {
         const result = await uploadWithRetry(audioBlob, finalDuration, mimeType)
         
         if (result.success && result.url && editor) {
-          editor.chain().focus().setAudio({ src: result.url }).run()
+          const createdAt = new Date().toISOString()
+          editor.chain().focus().insertContent({ type: 'audio', attrs: { src: result.url, played: false, createdAt } }).run()
         } else if (!result.success) {
           // Upload failed after retries - draft was saved
           alert('Voice note saved as draft. Check pending uploads to retry.')
@@ -438,7 +501,8 @@ export default function Editor() {
   const handleRetryDraft = useCallback(async (draftId: string) => {
     const result = await retryDraft(draftId)
     if (result.success && result.url && editor) {
-      editor.chain().focus().setAudio({ src: result.url }).run()
+      const createdAt = new Date().toISOString()
+      editor.chain().focus().insertContent({ type: 'audio', attrs: { src: result.url, played: false, createdAt } }).run()
       setShowDraftsMenu(false)
     } else if (!result.success) {
       alert('Upload failed. Please try again when you have a better connection.')
