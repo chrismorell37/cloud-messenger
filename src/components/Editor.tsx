@@ -477,7 +477,7 @@ export default function Editor() {
         }
       }
 
-      mediaRecorder.start()
+      mediaRecorder.start(1000)  // Collect chunks every second for better iOS/WebKit compatibility
       setIsRecording(true)
       setRecordingDuration(0)
       
