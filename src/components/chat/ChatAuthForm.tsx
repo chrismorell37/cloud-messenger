@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import type { ChatUser } from '../../stores/chatStore'
 
-const USER1_PASSWORD = import.meta.env.VITE_USER1_PASSWORD
-const USER2_PASSWORD = import.meta.env.VITE_USER2_PASSWORD
+const APP_PASSWORD = import.meta.env.VITE_APP_PASSWORD
 const USER1_NAME = import.meta.env.VITE_USER1_NAME || 'User 1'
 const USER2_NAME = import.meta.env.VITE_USER2_NAME || 'User 2'
 
@@ -11,47 +10,35 @@ interface ChatAuthFormProps {
 }
 
 export default function ChatAuthForm({ onSuccess }: ChatAuthFormProps) {
-  const [selectedUser, setSelectedUser] = useState<'user1' | 'user2' | null>(null)
+  const [step, setStep] = useState<'password' | 'select'>('password')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const handleUserSelect = (userId: 'user1' | 'user2') => {
-    setSelectedUser(userId)
-    setPassword('')
-    setError(null)
-  }
-
-  const handleBack = () => {
-    setSelectedUser(null)
-    setPassword('')
-    setError(null)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedUser) return
-    
     setIsLoading(true)
     setError(null)
 
     await new Promise(resolve => setTimeout(resolve, 500))
 
-    const expectedPassword = selectedUser === 'user1' ? USER1_PASSWORD : USER2_PASSWORD
-    const displayName = selectedUser === 'user1' ? USER1_NAME : USER2_NAME
-
-    if (password === expectedPassword) {
-      const user: ChatUser = {
-        id: selectedUser,
-        displayName
-      }
-      sessionStorage.setItem('chat-messenger-user', JSON.stringify(user))
-      onSuccess(user)
+    if (password === APP_PASSWORD) {
+      setStep('select')
     } else {
       setError('Incorrect password')
     }
 
     setIsLoading(false)
+  }
+
+  const handleUserSelect = (userId: 'user1' | 'user2') => {
+    const displayName = userId === 'user1' ? USER1_NAME : USER2_NAME
+    const user: ChatUser = {
+      id: userId,
+      displayName
+    }
+    sessionStorage.setItem('chat-messenger-user', JSON.stringify(user))
+    onSuccess(user)
   }
 
   return (
@@ -63,50 +50,12 @@ export default function ChatAuthForm({ onSuccess }: ChatAuthFormProps) {
               Pink/Blue
             </h1>
             <p className="text-sm text-dark-muted mt-2">
-              {selectedUser ? 'Enter your password' : 'Who are you?'}
+              {step === 'password' ? 'Enter password to continue' : 'Who are you?'}
             </p>
           </div>
 
-          {!selectedUser ? (
-            <div className="space-y-3">
-              <button
-                onClick={() => handleUserSelect('user1')}
-                className="w-full py-4 px-4 bg-blue-500 hover:bg-blue-600 
-                         text-white font-medium rounded-lg
-                         transition-colors flex items-center justify-center gap-3"
-              >
-                <span className="text-2xl">💙</span>
-                <span>{USER1_NAME}</span>
-              </button>
-              
-              <button
-                onClick={() => handleUserSelect('user2')}
-                className="w-full py-4 px-4 bg-pink-500 hover:bg-pink-600 
-                         text-white font-medium rounded-lg
-                         transition-colors flex items-center justify-center gap-3"
-              >
-                <span className="text-2xl">💗</span>
-                <span>{USER2_NAME}</span>
-              </button>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="flex items-center gap-3 p-3 bg-dark-bg rounded-lg mb-4">
-                <span className="text-2xl">
-                  {selectedUser === 'user1' ? '💙' : '💗'}
-                </span>
-                <span className="text-dark-text font-medium">
-                  {selectedUser === 'user1' ? USER1_NAME : USER2_NAME}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleBack}
-                  className="ml-auto text-sm text-dark-muted hover:text-dark-text"
-                >
-                  Change
-                </button>
-              </div>
-
+          {step === 'password' ? (
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
               <div>
                 <input
                   type="password"
@@ -119,7 +68,7 @@ export default function ChatAuthForm({ onSuccess }: ChatAuthFormProps) {
                            text-dark-text placeholder-dark-muted
                            focus:outline-none focus:ring-2 focus:ring-dark-accent focus:border-transparent
                            transition-colors"
-                  placeholder="Enter your password"
+                  placeholder="Enter password"
                 />
               </div>
 
@@ -144,10 +93,32 @@ export default function ChatAuthForm({ onSuccess }: ChatAuthFormProps) {
                     Checking...
                   </span>
                 ) : (
-                  'Enter'
+                  'Continue'
                 )}
               </button>
             </form>
+          ) : (
+            <div className="space-y-3">
+              <button
+                onClick={() => handleUserSelect('user1')}
+                className="w-full py-4 px-4 bg-blue-500 hover:bg-blue-600 
+                         text-white font-medium rounded-lg
+                         transition-colors flex items-center justify-center gap-3"
+              >
+                <span className="text-2xl">💙</span>
+                <span>{USER1_NAME}</span>
+              </button>
+              
+              <button
+                onClick={() => handleUserSelect('user2')}
+                className="w-full py-4 px-4 bg-pink-500 hover:bg-pink-600 
+                         text-white font-medium rounded-lg
+                         transition-colors flex items-center justify-center gap-3"
+              >
+                <span className="text-2xl">💗</span>
+                <span>{USER2_NAME}</span>
+              </button>
+            </div>
           )}
         </div>
       </div>
