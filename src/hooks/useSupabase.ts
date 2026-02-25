@@ -2,6 +2,7 @@ import { useEffect, useCallback, useRef } from 'react'
 import type { JSONContent } from '@tiptap/react'
 import { supabase } from '../lib/supabase'
 import { useEditorStore } from '../stores/editorStore'
+import { toCdnUrl } from '../lib/cdn'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
 const DOCUMENT_ID = '00000000-0000-0000-0000-000000000001'
@@ -120,8 +121,10 @@ export function useMediaUpload() {
       .from('media')
       .getPublicUrl(filePath)
 
-    console.log('Upload successful, public URL:', publicUrl)
-    return publicUrl
+    // Convert to CDN URL if configured
+    const finalUrl = toCdnUrl(publicUrl)
+    console.log('Upload successful, URL:', finalUrl)
+    return finalUrl
   }, [])
 
   return { uploadMedia }

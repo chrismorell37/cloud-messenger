@@ -3,6 +3,7 @@ import { useDebouncedCallback } from 'use-debounce'
 import { useChatMessages } from '../../hooks/useChatMessages'
 import { useChatTyping } from '../../hooks/useChatTyping'
 import { supabase } from '../../lib/supabase'
+import { toCdnUrl } from '../../lib/cdn'
 import { searchSongs, getSpotifyUrl, extractSpotifyUrl, buildSpotifySearchUrl, type SongResult } from '../../lib/musicSearch'
 import { extractInstagramUrl } from '../../lib/instagramExtension'
 
@@ -47,7 +48,7 @@ export function ChatInput() {
       .from('media')
       .getPublicUrl(filePath)
 
-    return publicUrl
+    return toCdnUrl(publicUrl)
   }, [])
 
   // Spotify song search (debounced)
