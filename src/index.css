@@ -699,6 +699,44 @@ body {
   @apply text-base leading-relaxed;
 }
 
+.bubble-edited {
+  @apply text-xs ml-1 opacity-60;
+}
+
+/* Bubble Edit Mode */
+.bubble-edit {
+  @apply w-full;
+}
+
+.bubble-edit-input {
+  @apply w-full px-2 py-1 rounded-lg text-base resize-none;
+  background: rgba(0, 0, 0, 0.1);
+  color: inherit;
+  border: none;
+  min-width: 200px;
+}
+
+.bubble-edit-input:focus {
+  @apply outline-none;
+}
+
+.bubble-edit-actions {
+  @apply flex justify-end gap-2 mt-2;
+}
+
+.bubble-edit-cancel,
+.bubble-edit-save {
+  @apply px-3 py-1 text-sm font-medium rounded-lg;
+}
+
+.bubble-edit-cancel {
+  @apply opacity-70;
+}
+
+.bubble-edit-save {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 .bubble-image {
   @apply rounded-2xl max-w-full;
   max-height: 300px;
@@ -722,15 +760,43 @@ body {
   @apply text-xs mt-2 opacity-70;
 }
 
-.bubble-gallery {
-  @apply flex gap-1 flex-wrap;
+.bubble-gallery-container {
+  @apply relative w-full;
+}
+
+.bubble-gallery-scroll {
+  @apply flex overflow-x-auto snap-x snap-mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.bubble-gallery-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.bubble-gallery-item {
+  @apply flex-shrink-0 w-full snap-center;
 }
 
 .bubble-gallery-image {
-  @apply rounded-lg;
-  width: calc(50% - 2px);
-  max-height: 150px;
-  object-fit: cover;
+  @apply w-full h-auto rounded-lg object-cover;
+  max-height: 250px;
+}
+
+.bubble-gallery-dots {
+  @apply flex justify-center gap-1.5 mt-2;
+}
+
+.bubble-gallery-dot {
+  @apply w-1.5 h-1.5 rounded-full transition-all duration-200;
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+.bubble-gallery-dot.active {
+  @apply w-2 h-2;
+  background-color: white;
 }
 
 .bubble-spotify {

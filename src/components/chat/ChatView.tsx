@@ -25,9 +25,11 @@ export function ChatView({ onSignOut }: ChatViewProps) {
       <header className="chat-header">
         <div className="chat-header-content">
           <div className="chat-header-info">
-            <h1 className="chat-header-title">{otherUserName}</h1>
-            {otherUserTyping?.isTyping && (
-              <span className="chat-header-status">typing...</span>
+            <h1 className="chat-header-title">Pink/Blue</h1>
+            {otherUserTyping?.isTyping ? (
+              <span className="chat-header-status">{otherUserName} is typing...</span>
+            ) : (
+              <span className="chat-header-status">with {otherUserName}</span>
             )}
           </div>
           

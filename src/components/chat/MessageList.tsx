@@ -6,7 +6,7 @@ import { TypingIndicator } from './TypingIndicator'
 
 export function MessageList() {
   const { messages } = useChatStore()
-  const { addReaction, deleteMessage } = useChatMessages()
+  const { addReaction, deleteMessage, editMessage } = useChatMessages()
   const listRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const isAtBottomRef = useRef(true)
@@ -60,6 +60,7 @@ export function MessageList() {
               message={message}
               onAddReaction={addReaction}
               onDelete={deleteMessage}
+              onEdit={editMessage}
               showTimestamp={shouldShowTimestamp(index)}
             />
           ))

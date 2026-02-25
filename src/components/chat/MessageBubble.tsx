@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState } from 'react'
+import React, { useMemo, useCallback, useState, useRef } from 'react'
 import { useChatStore, type ChatMessage } from '../../stores/chatStore'
 import { MediaContextMenu } from '../MediaContextMenu'
 
@@ -6,6 +6,7 @@ interface MessageBubbleProps {
   message: ChatMessage
   onAddReaction: (messageId: string, emoji: string) => void
   onDelete: (messageId: string) => void
+  onEdit: (messageId: string, newText: string) => void
   showTimestamp?: boolean
 }
 
@@ -16,10 +17,15 @@ export function MessageBubble({
   message, 
   onAddReaction, 
   onDelete,
+  onEdit,
   showTimestamp = false 
 }: MessageBubbleProps) {
   const { currentUser, setLightboxImage } = useChatStore()
   const [showContextMenu, setShowContextMenu] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editText, setEditText] = useState(message.content.text || '')
+  const [galleryIndex, setGalleryIndex] = useState(0)
+  const galleryScrollRef = useRef<HTMLDivElement>(null)
   
   const isOwnMessage = message.sender_id === currentUser?.id
   const senderName = message.sender_id === 'user1' ? USER1_NAME : USER2_NAME
@@ -44,17 +50,71 @@ export function MessageBubble({
   const handleDoubleTap = useCallback(() => {
     if (message.message_type === 'image' && message.media_url) {
       setLightboxImage(message.media_url)
+    } else if (message.message_type === 'gallery') {
+      const images = (message.content.attrs?.images as string[]) || []
+      if (images[galleryIndex]) {
+        setLightboxImage(images[galleryIndex])
+      }
     } else {
       onAddReaction(message.id, '🩵')
     }
-  }, [message, onAddReaction, setLightboxImage])
+  }, [message, onAddReaction, setLightboxImage, galleryIndex])
+
+  const handleEdit = useCallback(() => {
+    setIsEditing(true)
+    setEditText(message.content.text || '')
+    setShowContextMenu(false)
+  }, [message.content.text])
+
+  const handleEditSave = useCallback(() => {
+    if (editText.trim() && editText.trim() !== message.content.text) {
+      onEdit(message.id, editText.trim())
+    }
+    setIsEditing(false)
+  }, [editText, message.id, message.content.text, onEdit])
+
+  const handleEditCancel = useCallback(() => {
+    setIsEditing(false)
+    setEditText(message.content.text || '')
+  }, [message.content.text])
+
+  const handleGalleryScroll = useCallback(() => {
+    if (galleryScrollRef.current) {
+      const { scrollLeft, clientWidth } = galleryScrollRef.current
+      setGalleryIndex(Math.round(scrollLeft / clientWidth))
+    }
+  }, [])
 
   const renderContent = () => {
     switch (message.message_type) {
       case 'text':
+        if (isEditing) {
+          return (
+            <div className="bubble-edit">
+              <textarea
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                className="bubble-edit-input"
+                autoFocus
+                rows={2}
+              />
+              <div className="bubble-edit-actions">
+                <button onClick={handleEditCancel} className="bubble-edit-cancel">
+                  Cancel
+                </button>
+                <button onClick={handleEditSave} className="bubble-edit-save">
+                  Save
+                </button>
+              </div>
+            </div>
+          )
+        }
         return (
           <p className="bubble-text">
             {message.content.text || ''}
+            {message.updated_at !== message.created_at && (
+              <span className="bubble-edited">(edited)</span>
+            )}
           </p>
         )
       
@@ -71,16 +131,33 @@ export function MessageBubble({
       case 'gallery': {
         const images = (message.content.attrs?.images as string[]) || []
         return (
-          <div className="bubble-gallery">
-            {images.map((src, idx) => (
-              <img 
-                key={idx}
-                src={src} 
-                alt={`Gallery image ${idx + 1}`}
-                className="bubble-gallery-image"
-                onClick={() => setLightboxImage(src)}
-              />
-            ))}
+          <div className="bubble-gallery-container">
+            <div 
+              ref={galleryScrollRef}
+              className="bubble-gallery-scroll"
+              onScroll={handleGalleryScroll}
+            >
+              {images.map((src, idx) => (
+                <div key={idx} className="bubble-gallery-item">
+                  <img 
+                    src={src} 
+                    alt={`Gallery image ${idx + 1}`}
+                    className="bubble-gallery-image"
+                    onClick={() => setLightboxImage(src)}
+                  />
+                </div>
+              ))}
+            </div>
+            {images.length > 1 && (
+              <div className="bubble-gallery-dots">
+                {images.map((_, idx) => (
+                  <span 
+                    key={idx} 
+                    className={`bubble-gallery-dot ${idx === galleryIndex ? 'active' : ''}`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )
       }
@@ -203,6 +280,7 @@ export function MessageBubble({
           userId={currentUser?.id || ''}
           onReactionSelect={handleReactionSelect}
           onReply={() => setShowContextMenu(false)}
+          onEdit={isOwnMessage && message.message_type === 'text' ? handleEdit : undefined}
           onSave={message.media_url ? async () => {
             try {
               const response = await fetch(message.media_url!)
@@ -241,10 +319,10 @@ function MessageBubbleTouchHandler({
   isOwnMessage,
 }: TouchHandlerProps) {
   const [isPressing, setIsPressing] = useState(false)
-  const longPressTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
-  const lastTapRef = React.useRef<number>(0)
-  const touchStartRef = React.useRef<{ x: number; y: number } | null>(null)
-  const isLongPressRef = React.useRef(false)
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastTapRef = useRef<number>(0)
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
+  const isLongPressRef = useRef(false)
 
   const clearTimers = useCallback(() => {
     if (longPressTimer.current) {
@@ -305,5 +383,3 @@ function MessageBubbleTouchHandler({
     </div>
   )
 }
-
-import React from 'react'

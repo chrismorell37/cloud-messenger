@@ -7,6 +7,7 @@ interface MediaContextMenuProps {
   userId: string
   onReactionSelect: (emoji: string) => void
   onReply: () => void
+  onEdit?: () => void
   onSave?: () => void
   onDelete: () => void
   onClose: () => void
@@ -17,6 +18,7 @@ export function MediaContextMenu({
   userId,
   onReactionSelect,
   onReply,
+  onEdit,
   onSave,
   onDelete,
   onClose,
@@ -96,6 +98,16 @@ export function MediaContextMenu({
           </svg>
           <span>Reply</span>
         </button>
+
+        {onEdit && (
+          <button onClick={onEdit} className="context-menu-action">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+              <path d="m15 5 4 4"/>
+            </svg>
+            <span>Edit</span>
+          </button>
+        )}
 
         {onSave && (
           <button onClick={onSave} className="context-menu-action">

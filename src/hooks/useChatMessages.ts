@@ -109,6 +109,25 @@ export function useChatMessages() {
     updateMessage(messageId, { is_deleted: true })
   }, [updateMessage])
 
+  const editMessage = useCallback(async (messageId: string, newText: string) => {
+    const message = messages.find(m => m.id === messageId)
+    if (!message) return
+
+    const updatedContent = { ...message.content, text: newText }
+
+    const { error } = await supabase
+      .from('chat_messages' as 'messages')
+      .update({ content: updatedContent } as never)
+      .eq('id', messageId)
+
+    if (error) {
+      console.error('Error editing message:', error)
+      return
+    }
+
+    updateMessage(messageId, { content: updatedContent } as Partial<ChatMessage>)
+  }, [messages, updateMessage])
+
   useEffect(() => {
     loadMessages()
   }, [loadMessages])
@@ -158,6 +177,7 @@ export function useChatMessages() {
     sendMessage,
     addReaction,
     deleteMessage,
+    editMessage,
     loadMessages,
   }
 }
