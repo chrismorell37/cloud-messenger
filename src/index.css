@@ -855,6 +855,11 @@ body {
   color: var(--color-muted);
 }
 
+.chat-media-menu-divider {
+  @apply h-px my-1;
+  background: var(--color-border);
+}
+
 .chat-input-textarea {
   @apply flex-1 px-4 py-2 rounded-2xl resize-none text-base;
   background: var(--color-surface);
@@ -899,4 +904,76 @@ body {
   50% {
     transform: scale(1.1);
   }
+}
+
+/* Song Search Modal */
+.chat-song-search {
+  @apply absolute bottom-full left-0 right-0 mb-2 rounded-xl shadow-2xl overflow-hidden;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  max-height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-song-search-header {
+  @apply flex gap-2 p-3 border-b;
+  border-color: var(--color-border);
+}
+
+.chat-song-search-input {
+  @apply flex-1 px-3 py-2 rounded-lg text-sm;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.chat-song-search-input:focus {
+  @apply outline-none;
+  border-color: var(--color-accent);
+}
+
+.chat-song-search-input::placeholder {
+  color: var(--color-muted);
+}
+
+.chat-song-search-close {
+  @apply px-3 py-2 text-sm font-medium rounded-lg transition-colors;
+  color: var(--color-accent);
+}
+
+.chat-song-search-results {
+  @apply flex-1 overflow-y-auto;
+}
+
+.chat-song-search-loading,
+.chat-song-search-empty {
+  @apply p-4 text-center text-sm;
+  color: var(--color-muted);
+}
+
+.chat-song-result {
+  @apply w-full flex items-center gap-3 p-3 text-left transition-colors;
+}
+
+.chat-song-result:hover {
+  background: var(--color-border);
+}
+
+.chat-song-artwork {
+  @apply w-12 h-12 rounded-lg object-cover;
+}
+
+.chat-song-info {
+  @apply flex-1 min-w-0;
+}
+
+.chat-song-title {
+  @apply font-medium truncate;
+  color: var(--color-text);
+}
+
+.chat-song-artist {
+  @apply text-sm truncate;
+  color: var(--color-muted);
 }
