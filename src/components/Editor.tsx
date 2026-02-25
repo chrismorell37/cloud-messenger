@@ -8,6 +8,7 @@ import Placeholder from '@tiptap/extension-placeholder'
 import type { JSONContent } from '@tiptap/react'
 import { CustomImage, Video, Audio, SpotifyEmbed, ImageGallery } from '../lib/extensions'
 import { DateDivider } from '../lib/dateDividerExtension'
+import { InstagramEmbed, extractInstagramUrl } from '../lib/instagramExtension'
 import { compressVideoIfNeeded, isVideoFile, getFileSizeMB, MAX_SIZE_MB } from '../lib/videoCompression'
 import { searchSongs, getSpotifyUrl, extractSpotifyUrl, buildSpotifySearchUrl, type SongResult } from '../lib/musicSearch'
 import { useDebouncedCallback } from 'use-debounce'
@@ -147,6 +148,7 @@ export default function Editor() {
       SpotifyEmbed,
       ImageGallery,
       DateDivider,
+      InstagramEmbed,
       Placeholder.configure({
         placeholder: 'Start typing your message...',
       }),
@@ -168,12 +170,18 @@ export default function Editor() {
           handleFileDrop(files)
           return true
         }
-        // Check for Spotify URL in pasted text
         const text = event.clipboardData?.getData('text/plain')
         if (text) {
+          // Check for Spotify URL in pasted text
           const spotifyUrl = extractSpotifyUrl(text)
           if (spotifyUrl) {
             handleSpotifyUrlPaste(spotifyUrl)
+            return true
+          }
+          // Check for Instagram URL in pasted text
+          const instagramUrl = extractInstagramUrl(text)
+          if (instagramUrl) {
+            handleInstagramUrlPaste(instagramUrl)
             return true
           }
         }
@@ -248,6 +256,13 @@ export default function Editor() {
     if (!editor) return
     const createdAt = new Date().toISOString()
     editor.chain().focus().insertContent({ type: 'spotifyEmbed', attrs: { spotifyUri: spotifyUrl, createdAt } }).run()
+  }, [editor])
+
+  // Handle Instagram URL paste - auto-embed
+  const handleInstagramUrlPaste = useCallback((instagramUrl: string) => {
+    if (!editor) return
+    const createdAt = new Date().toISOString()
+    editor.chain().focus().insertContent({ type: 'instagramEmbed', attrs: { instagramUrl, createdAt } }).run()
   }, [editor])
 
   // Handle song search (debounced)
