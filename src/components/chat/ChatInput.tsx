@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import { useChatMessages } from '../../hooks/useChatMessages'
 import { useChatTyping } from '../../hooks/useChatTyping'
@@ -10,6 +10,7 @@ import { extractInstagramUrl } from '../../lib/instagramExtension'
 export function ChatInput() {
   const [text, setText] = useState('')
   const [isRecording, setIsRecording] = useState(false)
+  const [recordingDuration, setRecordingDuration] = useState(0)
   const [showMediaMenu, setShowMediaMenu] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [showSongSearch, setShowSongSearch] = useState(false)
@@ -29,6 +30,36 @@ export function ChatInput() {
   const cameraVideoInputRef = useRef<HTMLInputElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Recording timer effect
+  useEffect(() => {
+    if (isRecording) {
+      setRecordingDuration(0)
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1)
+      }, 1000)
+    } else {
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current)
+        recordingTimerRef.current = null
+      }
+      setRecordingDuration(0)
+    }
+
+    return () => {
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current)
+      }
+    }
+  }, [isRecording])
+
+  // Format seconds as MM:SS
+  const formatDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
 
   const uploadMedia = useCallback(async (file: File): Promise<string | null> => {
     const fileExt = file.name.split('.').pop()
@@ -538,14 +569,20 @@ export function ChatInput() {
         />
 
         {isRecording ? (
-          <button
-            onClick={stopRecording}
-            className="chat-input-send-btn recording"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <rect x="6" y="6" width="12" height="12" rx="2"/>
-            </svg>
-          </button>
+          <>
+            <div className="chat-recording-indicator">
+              <span className="chat-recording-dot" />
+              <span className="chat-recording-time">{formatDuration(recordingDuration)}</span>
+            </div>
+            <button
+              onClick={stopRecording}
+              className="chat-input-send-btn recording"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="6" width="12" height="12" rx="2"/>
+              </svg>
+            </button>
+          </>
         ) : (
           <button
             onClick={handleSend}

@@ -972,6 +972,33 @@ body {
   }
 }
 
+/* Recording Indicator */
+.chat-recording-indicator {
+  @apply flex items-center gap-2 px-3 py-1.5 rounded-full;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.chat-recording-dot {
+  @apply w-2.5 h-2.5 rounded-full;
+  background: #ef4444;
+  animation: recording-blink 1s infinite;
+}
+
+@keyframes recording-blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.chat-recording-time {
+  @apply text-sm font-mono font-medium;
+  color: #ef4444;
+  min-width: 40px;
+}
+
 /* Song Search Modal */
 .chat-song-search {
   @apply absolute bottom-full left-0 right-0 mb-2 rounded-xl shadow-2xl overflow-hidden;
