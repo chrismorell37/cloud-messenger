@@ -2,8 +2,8 @@ import { useState } from 'react'
 import type { ChatUser } from '../../stores/chatStore'
 
 const APP_PASSWORD = import.meta.env.VITE_APP_PASSWORD
-const USER1_NAME = import.meta.env.VITE_USER1_NAME || 'User 1'
-const USER2_NAME = import.meta.env.VITE_USER2_NAME || 'User 2'
+const USER1_NAME = import.meta.env.VITE_USER1_NAME || 'S'
+const USER2_NAME = import.meta.env.VITE_USER2_NAME || 'C'
 
 interface ChatAuthFormProps {
   onSuccess: (user: ChatUser) => void
@@ -102,21 +102,19 @@ export default function ChatAuthForm({ onSuccess }: ChatAuthFormProps) {
               <button
                 onClick={() => handleUserSelect('user1')}
                 className="w-full py-4 px-4 bg-blue-500 hover:bg-blue-600 
-                         text-white font-medium rounded-lg
-                         transition-colors flex items-center justify-center gap-3"
+                         text-white text-xl font-semibold rounded-lg
+                         transition-colors"
               >
-                <span className="text-2xl">💙</span>
-                <span>{USER1_NAME}</span>
+                S
               </button>
               
               <button
                 onClick={() => handleUserSelect('user2')}
                 className="w-full py-4 px-4 bg-pink-500 hover:bg-pink-600 
-                         text-white font-medium rounded-lg
-                         transition-colors flex items-center justify-center gap-3"
+                         text-white text-xl font-semibold rounded-lg
+                         transition-colors"
               >
-                <span className="text-2xl">💗</span>
-                <span>{USER2_NAME}</span>
+                C
               </button>
             </div>
           )}
