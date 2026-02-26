@@ -811,13 +811,23 @@ body {
   @apply rounded-xl overflow-hidden;
 }
 
-/* Bubble Reactions */
+/* Bubble Reactions - positioned at top like iMessage */
 .bubble-reactions {
-  @apply absolute -bottom-3 left-2 flex gap-1;
+  @apply absolute -top-3 flex gap-1 z-10;
+}
+
+/* Own messages: reactions on upper left */
+.message-bubble-container.own .bubble-reactions {
+  left: -4px;
+}
+
+/* Other's messages: reactions on upper right */
+.message-bubble-container.other .bubble-reactions {
+  right: -4px;
 }
 
 .bubble-reaction {
-  @apply px-1.5 py-0.5 rounded-full text-sm cursor-pointer;
+  @apply px-1.5 py-0.5 rounded-full text-sm cursor-pointer shadow-sm;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
 }
@@ -825,6 +835,69 @@ body {
 .bubble-reaction.own {
   background: rgba(59, 130, 246, 0.2);
   border-color: rgba(59, 130, 246, 0.5);
+}
+
+/* Prevent text selection on long press */
+.bubble-text {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Reply preview in message bubble */
+.message-reply-preview {
+  @apply flex items-center gap-2 px-3 py-1.5 mb-1 rounded-lg text-xs;
+  background: rgba(0, 0, 0, 0.1);
+  border-left: 2px solid var(--color-muted);
+}
+
+.message-reply-preview.own {
+  background: rgba(255, 255, 255, 0.15);
+  border-left-color: rgba(255, 255, 255, 0.5);
+}
+
+.message-reply-preview.other {
+  background: var(--color-border);
+  border-left-color: var(--color-muted);
+}
+
+.reply-preview-sender {
+  @apply font-semibold;
+}
+
+.reply-preview-text {
+  @apply truncate;
+  max-width: 200px;
+}
+
+/* Reply preview above input */
+.chat-reply-preview {
+  @apply flex items-center justify-between gap-2 px-4 py-2 border-b;
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+.chat-reply-preview-content {
+  @apply flex flex-col gap-0.5 min-w-0 flex-1;
+}
+
+.chat-reply-preview-label {
+  @apply text-xs font-medium;
+  color: var(--color-accent);
+}
+
+.chat-reply-preview-text {
+  @apply text-sm truncate;
+  color: var(--color-muted);
+}
+
+.chat-reply-preview-close {
+  @apply p-1 rounded-full transition-colors;
+  color: var(--color-muted);
+}
+
+.chat-reply-preview-close:hover {
+  background: var(--color-border);
+  color: var(--color-text);
 }
 
 /* Message Time */

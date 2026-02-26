@@ -62,6 +62,7 @@ export function MessageList() {
               onDelete={deleteMessage}
               onEdit={editMessage}
               showTimestamp={shouldShowTimestamp(index)}
+              allMessages={messages}
             />
           ))
         )}

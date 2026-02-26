@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import { useChatMessages } from '../../hooks/useChatMessages'
 import { useChatTyping } from '../../hooks/useChatTyping'
+import { useChatStore } from '../../stores/chatStore'
 import { supabase } from '../../lib/supabase'
 import { toCdnUrl } from '../../lib/cdn'
 import { searchSongs, getSpotifyUrl, extractSpotifyUrl, buildSpotifySearchUrl, type SongResult } from '../../lib/musicSearch'
@@ -21,6 +22,7 @@ export function ChatInput() {
   
   const { sendMessage } = useChatMessages()
   const { handleTyping, stopTyping } = useChatTyping()
+  const { replyingTo, setReplyingTo } = useChatStore()
   
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -145,14 +147,19 @@ export function ChatInput() {
     const trimmedText = text.trim()
     if (!trimmedText) return
 
+    const replyToId = replyingTo?.id
+
     // Check for Spotify URL
     const spotifyUrl = extractSpotifyUrl(trimmedText)
     if (spotifyUrl) {
       stopTyping()
       setText('')
+      setReplyingTo(null)
       await sendMessage(
         { type: 'spotify', attrs: { spotifyUri: spotifyUrl } },
-        'spotify'
+        'spotify',
+        undefined,
+        replyToId
       )
       return
     }
@@ -162,9 +169,12 @@ export function ChatInput() {
     if (instagramUrl) {
       stopTyping()
       setText('')
+      setReplyingTo(null)
       await sendMessage(
         { type: 'instagram', attrs: { instagramUrl } },
-        'instagram'
+        'instagram',
+        undefined,
+        replyToId
       )
       return
     }
@@ -172,11 +182,14 @@ export function ChatInput() {
     // Regular text message
     stopTyping()
     setText('')
+    setReplyingTo(null)
     await sendMessage(
       { type: 'text', text: trimmedText },
-      'text'
+      'text',
+      undefined,
+      replyToId
     )
-  }, [text, sendMessage, stopTyping])
+  }, [text, sendMessage, stopTyping, replyingTo, setReplyingTo])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -405,6 +418,36 @@ export function ChatInput() {
         onChange={handleCameraVideo}
         className="hidden"
       />
+
+      {/* Reply preview */}
+      {replyingTo && (
+        <div className="chat-reply-preview">
+          <div className="chat-reply-preview-content">
+            <span className="chat-reply-preview-label">
+              Replying to {replyingTo.sender_id === 'user1' ? 'S' : 'C'}
+            </span>
+            <span className="chat-reply-preview-text">
+              {replyingTo.message_type === 'text'
+                ? (replyingTo.content.text || '').slice(0, 50) + ((replyingTo.content.text || '').length > 50 ? '...' : '')
+                : replyingTo.message_type === 'image' ? 'Photo'
+                : replyingTo.message_type === 'video' ? 'Video'
+                : replyingTo.message_type === 'audio' ? 'Voice note'
+                : replyingTo.message_type === 'spotify' ? 'Spotify'
+                : replyingTo.message_type === 'gallery' ? 'Photo album'
+                : 'Message'}
+            </span>
+          </div>
+          <button 
+            onClick={() => setReplyingTo(null)}
+            className="chat-reply-preview-close"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      )}
 
       {/* Song Search Modal */}
       {showSongSearch && (

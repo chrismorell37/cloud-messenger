@@ -34,6 +34,7 @@ interface ChatState {
   isLoading: boolean
   otherUserTyping: OtherUserTyping | null
   lightboxImage: string | null
+  replyingTo: ChatMessage | null
   
   setMessages: (messages: ChatMessage[]) => void
   addMessage: (message: ChatMessage) => void
@@ -44,6 +45,7 @@ interface ChatState {
   setIsLoading: (isLoading: boolean) => void
   setOtherUserTyping: (typing: OtherUserTyping | null) => void
   setLightboxImage: (url: string | null) => void
+  setReplyingTo: (message: ChatMessage | null) => void
   reset: () => void
 }
 
@@ -54,6 +56,7 @@ const initialState = {
   isLoading: true,
   otherUserTyping: null,
   lightboxImage: null,
+  replyingTo: null,
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -82,5 +85,6 @@ export const useChatStore = create<ChatState>((set) => ({
   setIsLoading: (isLoading) => set({ isLoading }),
   setOtherUserTyping: (typing) => set({ otherUserTyping: typing }),
   setLightboxImage: (url) => set({ lightboxImage: url }),
+  setReplyingTo: (message) => set({ replyingTo: message }),
   reset: () => set(initialState),
 }))

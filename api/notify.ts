@@ -124,36 +124,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Fetch a sports news article
     const article = await fetchSportsNews()
     
-    let subject: string
     let htmlContent: string
     let textContent: string
     
+    // Use consistent subject line for email threading
+    const subject = 'Your ongoing sports news rollup'
+    
     if (article) {
       // Send article as email
-      subject = article.title
       htmlContent = `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h2 style="color: #1a1a1a; margin-bottom: 15px;">${article.title}</h2>
           ${article.description ? `<p style="font-size: 16px; line-height: 1.6; color: #333; margin-bottom: 20px;">${article.description}...</p>` : ''}
-          <a href="${article.link}" style="display: inline-block; background: #0066cc; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">Read Full Story</a>
+          <a href="${article.link}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: #0066cc; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">Read Full Story</a>
           <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
           <p style="font-size: 12px; color: #999;">Sports news from ESPN</p>
+          <p style="font-size: 11px; color: #bbb; margin-top: 10px;">Unsubscribe</p>
         </div>
       `
-      textContent = `${article.title}\n\n${article.description || ''}\n\nRead more: ${article.link}`
+      textContent = `${article.title}\n\n${article.description || ''}\n\nRead more: ${article.link}\n\n---\nUnsubscribe`
     } else {
       // Fallback to a sports fact
       const randomFact = FALLBACK_FACTS[Math.floor(Math.random() * FALLBACK_FACTS.length)]
-      subject = `Sports Fact: ${randomFact.slice(0, 50)}...`
       htmlContent = `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h2 style="color: #1a1a1a; margin-bottom: 20px;">Did you know?</h2>
           <p style="font-size: 18px; line-height: 1.6; color: #333;">${randomFact}</p>
           <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
           <p style="font-size: 12px; color: #999;">Sports fact of the day</p>
+          <p style="font-size: 11px; color: #bbb; margin-top: 10px;">Unsubscribe</p>
         </div>
       `
-      textContent = `Did you know?\n\n${randomFact}`
+      textContent = `Did you know?\n\n${randomFact}\n\n---\nUnsubscribe`
     }
 
     // Send email via Resend

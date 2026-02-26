@@ -8,19 +8,18 @@ interface MessageBubbleProps {
   onDelete: (messageId: string) => void
   onEdit: (messageId: string, newText: string) => void
   showTimestamp?: boolean
+  allMessages: ChatMessage[]
 }
-
-const USER1_NAME = import.meta.env.VITE_USER1_NAME || 'User 1'
-const USER2_NAME = import.meta.env.VITE_USER2_NAME || 'User 2'
 
 export function MessageBubble({ 
   message, 
   onAddReaction, 
   onDelete,
   onEdit,
-  showTimestamp = false 
+  showTimestamp = false,
+  allMessages = []
 }: MessageBubbleProps) {
-  const { currentUser, setLightboxImage } = useChatStore()
+  const { currentUser, setLightboxImage, setReplyingTo } = useChatStore()
   const [showContextMenu, setShowContextMenu] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editText, setEditText] = useState(message.content.text || '')
@@ -28,7 +27,12 @@ export function MessageBubble({
   const galleryScrollRef = useRef<HTMLDivElement>(null)
   
   const isOwnMessage = message.sender_id === currentUser?.id
-  const senderName = message.sender_id === 'user1' ? USER1_NAME : USER2_NAME
+  const senderName = message.sender_id === 'user1' ? 'S' : 'C'
+  
+  // Find the message being replied to
+  const repliedToMessage = message.reply_to 
+    ? allMessages.find(m => m.id === message.reply_to) 
+    : null
 
   const formattedTime = useMemo(() => {
     const date = new Date(message.created_at)
@@ -63,6 +67,19 @@ export function MessageBubble({
   const handleEdit = useCallback(() => {
     setIsEditing(true)
     setEditText(message.content.text || '')
+    setShowContextMenu(false)
+  }, [message.content.text])
+
+  const handleReply = useCallback(() => {
+    setReplyingTo(message)
+    setShowContextMenu(false)
+  }, [message, setReplyingTo])
+
+  const handleCopy = useCallback(() => {
+    const textToCopy = message.content.text || ''
+    if (textToCopy) {
+      navigator.clipboard.writeText(textToCopy).catch(console.error)
+    }
     setShowContextMenu(false)
   }, [message.content.text])
 
@@ -252,6 +269,23 @@ export function MessageBubble({
         onDoubleTap={handleDoubleTap}
         isOwnMessage={isOwnMessage}
       >
+        {repliedToMessage && (
+          <div className={`message-reply-preview ${isOwnMessage ? 'own' : 'other'}`}>
+            <span className="reply-preview-sender">
+              {repliedToMessage.sender_id === 'user1' ? 'S' : 'C'}
+            </span>
+            <span className="reply-preview-text">
+              {repliedToMessage.message_type === 'text' 
+                ? (repliedToMessage.content.text || '').slice(0, 50) + ((repliedToMessage.content.text || '').length > 50 ? '...' : '')
+                : repliedToMessage.message_type === 'image' ? 'Photo'
+                : repliedToMessage.message_type === 'video' ? 'Video'
+                : repliedToMessage.message_type === 'audio' ? 'Voice note'
+                : repliedToMessage.message_type === 'spotify' ? 'Spotify'
+                : repliedToMessage.message_type === 'gallery' ? 'Photo album'
+                : 'Message'}
+            </span>
+          </div>
+        )}
         <div className={`message-bubble ${isOwnMessage ? 'own' : 'other'} ${message.message_type !== 'text' ? 'media' : ''}`}>
           {renderContent()}
           
@@ -279,8 +313,9 @@ export function MessageBubble({
           reactions={message.reactions || {}}
           userId={currentUser?.id || ''}
           onReactionSelect={handleReactionSelect}
-          onReply={() => setShowContextMenu(false)}
+          onReply={handleReply}
           onEdit={isOwnMessage && message.message_type === 'text' ? handleEdit : undefined}
+          onCopy={message.message_type === 'text' && message.content.text ? handleCopy : undefined}
           onSave={message.media_url ? async () => {
             try {
               const response = await fetch(message.media_url!)
