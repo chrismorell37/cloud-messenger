@@ -605,7 +605,7 @@ export function ChatInput() {
           value={text}
           onChange={handleTextChange}
           onKeyDown={handleKeyDown}
-          placeholder="Message (paste Spotify/Instagram links)"
+          placeholder="Message"
           rows={1}
           className="chat-input-textarea"
           disabled={isUploading}
