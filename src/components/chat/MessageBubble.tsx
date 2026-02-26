@@ -555,11 +555,9 @@ interface SpotifyEmbedProps {
 }
 
 function SpotifyEmbed({ embedUrl, onLongPress }: SpotifyEmbedProps) {
-  const [isBlocking, setIsBlocking] = useState(false)
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
-  const isLongPressRef = useRef(false)
-  const wrapperRef = useRef<HTMLDivElement>(null)
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null)
+  const longPressTriggeredRef = useRef(false)
 
   const clearTimer = useCallback(() => {
     if (longPressTimer.current) {
@@ -568,57 +566,42 @@ function SpotifyEmbed({ embedUrl, onLongPress }: SpotifyEmbedProps) {
     }
   }, [])
 
-  useEffect(() => {
-    const wrapper = wrapperRef.current
-    if (!wrapper) return
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0]
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() }
+    longPressTriggeredRef.current = false
 
-    const handleTouchStart = (e: TouchEvent) => {
-      const touch = e.touches[0]
-      touchStartRef.current = { x: touch.clientX, y: touch.clientY }
-      isLongPressRef.current = false
-      setIsBlocking(true)
-
-      longPressTimer.current = setTimeout(() => {
-        isLongPressRef.current = true
-        if (navigator.vibrate) {
-          navigator.vibrate(10)
-        }
-        onLongPress()
-        setIsBlocking(false)
-      }, 500)
-    }
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (!touchStartRef.current) return
-      const touch = e.touches[0]
-      const dx = Math.abs(touch.clientX - touchStartRef.current.x)
-      const dy = Math.abs(touch.clientY - touchStartRef.current.y)
-      if (dx > 10 || dy > 10) {
-        clearTimer()
-        setIsBlocking(false)
+    longPressTimer.current = setTimeout(() => {
+      longPressTriggeredRef.current = true
+      if (navigator.vibrate) {
+        navigator.vibrate(10)
       }
-    }
+      onLongPress()
+    }, 600)
+  }, [onLongPress])
 
-    const handleTouchEnd = () => {
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!touchStartRef.current) return
+    const touch = e.touches[0]
+    const dx = Math.abs(touch.clientX - touchStartRef.current.x)
+    const dy = Math.abs(touch.clientY - touchStartRef.current.y)
+    if (dx > 10 || dy > 10) {
       clearTimer()
-      setIsBlocking(false)
     }
+  }, [clearTimer])
 
-    wrapper.addEventListener('touchstart', handleTouchStart, { passive: true })
-    wrapper.addEventListener('touchmove', handleTouchMove, { passive: true })
-    wrapper.addEventListener('touchend', handleTouchEnd, { passive: true })
-    wrapper.addEventListener('touchcancel', handleTouchEnd, { passive: true })
-
-    return () => {
-      wrapper.removeEventListener('touchstart', handleTouchStart)
-      wrapper.removeEventListener('touchmove', handleTouchMove)
-      wrapper.removeEventListener('touchend', handleTouchEnd)
-      wrapper.removeEventListener('touchcancel', handleTouchEnd)
-    }
-  }, [onLongPress, clearTimer])
+  const handleTouchEnd = useCallback(() => {
+    clearTimer()
+  }, [clearTimer])
 
   return (
-    <div ref={wrapperRef} className="spotify-embed-wrapper">
+    <div 
+      className="spotify-embed-wrapper"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
+    >
       <iframe
         src={embedUrl}
         width="100%"
@@ -626,8 +609,8 @@ function SpotifyEmbed({ embedUrl, onLongPress }: SpotifyEmbedProps) {
         frameBorder="0"
         allow="encrypted-media"
         className="bubble-spotify rounded-lg"
+        style={{ pointerEvents: 'auto' }}
       />
-      {isBlocking && <div className="spotify-touch-overlay" />}
     </div>
   )
 }

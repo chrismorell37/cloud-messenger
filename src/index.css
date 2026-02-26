@@ -474,8 +474,47 @@ body {
   overflow-y: auto;
 }
 
+.emoji-picker-full {
+  @apply flex flex-col;
+  max-height: 280px;
+}
+
+.emoji-category-tabs {
+  @apply flex gap-1 px-2 py-2 border-b overflow-x-auto;
+  border-color: var(--color-border);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.emoji-category-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.emoji-category-tab {
+  @apply flex-shrink-0 w-8 h-8 flex items-center justify-center text-lg
+         rounded-md transition-all;
+  background: transparent;
+  border: none;
+}
+
+.emoji-category-tab:hover {
+  background: var(--color-surface);
+}
+
+.emoji-category-tab.active {
+  background: var(--color-accent);
+}
+
+.emoji-picker-grid-full {
+  @apply grid gap-1 px-2 py-2;
+  grid-template-columns: repeat(8, 1fr);
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .emoji-grid-button {
-  @apply w-10 h-10 flex items-center justify-center text-xl
+  @apply w-9 h-9 flex items-center justify-center text-xl
          rounded-lg hover:bg-dark-border active:scale-95 transition-all;
 }
 
