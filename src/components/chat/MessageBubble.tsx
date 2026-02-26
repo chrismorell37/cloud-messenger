@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState, useRef } from 'react'
+import React, { useMemo, useCallback, useState, useRef, useEffect } from 'react'
 import { useChatStore, type ChatMessage } from '../../stores/chatStore'
 import { MediaContextMenu } from '../MediaContextMenu'
 
@@ -7,6 +7,7 @@ interface MessageBubbleProps {
   onAddReaction: (messageId: string, emoji: string) => void
   onDelete: (messageId: string) => void
   onEdit: (messageId: string, newText: string) => void
+  onUpdateContent: (messageId: string, attrs: Record<string, unknown>) => void
   showTimestamp?: boolean
   allMessages: ChatMessage[]
 }
@@ -16,6 +17,7 @@ export function MessageBubble({
   onAddReaction, 
   onDelete,
   onEdit,
+  onUpdateContent,
   showTimestamp = false,
   allMessages = []
 }: MessageBubbleProps) {
@@ -25,6 +27,48 @@ export function MessageBubble({
   const [editText, setEditText] = useState(message.content.text || '')
   const [galleryIndex, setGalleryIndex] = useState(0)
   const galleryScrollRef = useRef<HTMLDivElement>(null)
+  
+  // Transcription state for audio messages
+  const [isTranscribing, setIsTranscribing] = useState(false)
+  const [transcriptionError, setTranscriptionError] = useState(false)
+  const transcriptionAttemptedRef = useRef(false)
+
+  // Auto-transcribe audio messages that don't have transcription yet
+  useEffect(() => {
+    if (
+      message.message_type === 'audio' &&
+      message.media_url &&
+      !message.content.attrs?.transcription &&
+      !isTranscribing &&
+      !transcriptionError &&
+      !transcriptionAttemptedRef.current
+    ) {
+      transcriptionAttemptedRef.current = true
+      setIsTranscribing(true)
+
+      fetch('/api/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audioUrl: message.media_url }),
+      })
+        .then(res => {
+          if (!res.ok) throw new Error('Transcription failed')
+          return res.json()
+        })
+        .then(data => {
+          if (data.transcription) {
+            onUpdateContent(message.id, { transcription: data.transcription })
+          }
+        })
+        .catch(err => {
+          console.error('Transcription error:', err)
+          setTranscriptionError(true)
+        })
+        .finally(() => {
+          setIsTranscribing(false)
+        })
+    }
+  }, [message.id, message.message_type, message.media_url, message.content.attrs?.transcription, isTranscribing, transcriptionError, onUpdateContent])
   
   const isOwnMessage = message.sender_id === currentUser?.id
   const senderName = message.sender_id === 'user1' ? 'S' : 'C'
@@ -197,9 +241,19 @@ export function MessageBubble({
               controls 
               className="w-full"
             />
+            {isTranscribing && (
+              <p className="bubble-transcription transcribing">
+                Transcribing...
+              </p>
+            )}
             {transcription && (
               <p className="bubble-transcription">
                 {transcription}
+              </p>
+            )}
+            {transcriptionError && !transcription && (
+              <p className="bubble-transcription error">
+                Transcription unavailable
               </p>
             )}
           </div>
@@ -213,14 +267,7 @@ export function MessageBubble({
           ? spotifyUri.replace('open.spotify.com', 'open.spotify.com/embed')
           : `https://open.spotify.com/embed/${spotifyUri.replace('spotify:', '').replace(/:/g, '/')}`
         return (
-          <iframe
-            src={embedUrl}
-            width="100%"
-            height="80"
-            frameBorder="0"
-            allow="encrypted-media"
-            className="bubble-spotify rounded-lg"
-          />
+          <SpotifyEmbed embedUrl={embedUrl} onLongPress={handleLongPress} />
         )
       }
       
@@ -442,6 +489,82 @@ function MessageBubbleTouchHandler({
       onTouchEnd={handleTouchEnd}
     >
       {children}
+    </div>
+  )
+}
+
+interface SpotifyEmbedProps {
+  embedUrl: string
+  onLongPress: () => void
+}
+
+function SpotifyEmbed({ embedUrl, onLongPress }: SpotifyEmbedProps) {
+  const [allowInteraction, setAllowInteraction] = useState(false)
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
+  const isLongPressRef = useRef(false)
+
+  const clearTimer = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }, [])
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0]
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY }
+    isLongPressRef.current = false
+    setAllowInteraction(false)
+
+    longPressTimer.current = setTimeout(() => {
+      isLongPressRef.current = true
+      if (navigator.vibrate) {
+        navigator.vibrate(10)
+      }
+      onLongPress()
+    }, 500)
+  }, [onLongPress])
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!touchStartRef.current) return
+    const touch = e.touches[0]
+    const dx = Math.abs(touch.clientX - touchStartRef.current.x)
+    const dy = Math.abs(touch.clientY - touchStartRef.current.y)
+    if (dx > 10 || dy > 10) {
+      clearTimer()
+    }
+  }, [clearTimer])
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    clearTimer()
+    
+    if (isLongPressRef.current) {
+      e.preventDefault()
+      return
+    }
+
+    // Allow the iframe to receive the interaction
+    setAllowInteraction(true)
+    setTimeout(() => setAllowInteraction(false), 300)
+  }, [clearTimer])
+
+  return (
+    <div className="spotify-embed-wrapper">
+      <iframe
+        src={embedUrl}
+        width="100%"
+        height="80"
+        frameBorder="0"
+        allow="encrypted-media"
+        className="bubble-spotify rounded-lg"
+      />
+      <div 
+        className={`spotify-touch-overlay ${allowInteraction ? 'allow-interaction' : ''}`}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      />
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 
 const PRESET_EMOJIS = ['🩵', '🥹', '🤣', '🩷', '❤️‍🔥', '🫣']
 
@@ -26,7 +26,9 @@ export function MediaContextMenu({
   onClose,
 }: MediaContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
+  const emojiInputRef = useRef<HTMLInputElement>(null)
   const openedAtRef = useRef<number>(Date.now())
+  const [showEmojiInput, setShowEmojiInput] = useState(false)
   
   const handleClose = useCallback(() => {
     // Ignore close events within 400ms of opening (to handle long press release)
@@ -88,7 +90,50 @@ export function MediaContextMenu({
               </button>
             )
           })}
+          <button
+            onClick={() => {
+              setShowEmojiInput(true)
+              setTimeout(() => emojiInputRef.current?.focus(), 100)
+            }}
+            className="emoji-button emoji-button-add"
+          >
+            +
+          </button>
         </div>
+        
+        {showEmojiInput && (
+          <div className="emoji-picker-input-row">
+            <input
+              ref={emojiInputRef}
+              type="text"
+              inputMode="text"
+              placeholder="Type or paste emoji..."
+              className="emoji-picker-input"
+              autoFocus
+              onChange={(e) => {
+                const value = e.target.value
+                // Check if input contains emoji (non-ASCII characters that are likely emoji)
+                const emojiRegex = /(\p{Emoji_Presentation}|\p{Extended_Pictographic})/gu
+                const matches = value.match(emojiRegex)
+                if (matches && matches.length > 0) {
+                  onReactionSelect(matches[0])
+                  setShowEmojiInput(false)
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  setShowEmojiInput(false)
+                }
+              }}
+            />
+            <button 
+              onClick={() => setShowEmojiInput(false)}
+              className="emoji-picker-cancel"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
 
         {/* Divider */}
         <div className="context-menu-divider" />

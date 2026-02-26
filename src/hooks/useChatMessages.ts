@@ -132,6 +132,28 @@ export function useChatMessages() {
     updateMessage(messageId, { content: updatedContent } as Partial<ChatMessage>)
   }, [messages, updateMessage])
 
+  const updateMessageContent = useCallback(async (messageId: string, attrs: Record<string, unknown>) => {
+    const message = messages.find(m => m.id === messageId)
+    if (!message) return
+
+    const updatedContent = { 
+      ...message.content, 
+      attrs: { ...message.content.attrs, ...attrs } 
+    }
+
+    const { error } = await supabase
+      .from('chat_messages' as 'messages')
+      .update({ content: updatedContent } as never)
+      .eq('id', messageId)
+
+    if (error) {
+      console.error('Error updating message content:', error)
+      return
+    }
+
+    updateMessage(messageId, { content: updatedContent } as Partial<ChatMessage>)
+  }, [messages, updateMessage])
+
   const clearAllMessages = useCallback(async () => {
     const { error } = await supabase
       .from('chat_messages' as 'messages')
@@ -208,6 +230,7 @@ export function useChatMessages() {
     addReaction,
     deleteMessage,
     editMessage,
+    updateMessageContent,
     loadMessages,
     clearAllMessages,
   }

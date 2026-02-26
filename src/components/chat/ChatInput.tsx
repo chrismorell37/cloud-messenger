@@ -34,12 +34,30 @@ export function ChatInput() {
   const audioChunksRef = useRef<Blob[]>([])
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  const MAX_RECORDING_DURATION = 300 // 5 minutes in seconds
+  const RECORDING_WARNING_DURATION = 240 // 4 minutes warning
+
   // Recording timer effect
   useEffect(() => {
     if (isRecording) {
       setRecordingDuration(0)
       recordingTimerRef.current = setInterval(() => {
-        setRecordingDuration(prev => prev + 1)
+        setRecordingDuration(prev => {
+          const newDuration = prev + 1
+          
+          // Warn at 4 minutes
+          if (newDuration === RECORDING_WARNING_DURATION) {
+            alert('Recording is getting long. Consider stopping soon to ensure it uploads successfully.')
+          }
+          
+          // Auto-stop at 5 minutes
+          if (newDuration >= MAX_RECORDING_DURATION) {
+            stopRecording()
+            return prev
+          }
+          
+          return newDuration
+        })
       }, 1000)
     } else {
       if (recordingTimerRef.current) {
@@ -54,6 +72,7 @@ export function ChatInput() {
         clearInterval(recordingTimerRef.current)
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRecording])
 
   // Format seconds as MM:SS
@@ -63,25 +82,45 @@ export function ChatInput() {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
+  const MAX_FILE_SIZE_MB = 25 // Supabase free tier and Whisper API limit
+
   const uploadMedia = useCallback(async (file: File): Promise<string | null> => {
+    const fileSizeMB = file.size / (1024 * 1024)
+    
+    if (fileSizeMB > MAX_FILE_SIZE_MB) {
+      alert(`File too large (${fileSizeMB.toFixed(1)}MB). Maximum size is ${MAX_FILE_SIZE_MB}MB.\n\nFor long voice notes, try recording in shorter segments.`)
+      return null
+    }
+
     const fileExt = file.name.split('.').pop()
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
     const filePath = `uploads/${fileName}`
 
-    const { error } = await supabase.storage
-      .from('media')
-      .upload(filePath, file, { contentType: file.type })
+    try {
+      const { error } = await supabase.storage
+        .from('media')
+        .upload(filePath, file, { contentType: file.type })
 
-    if (error) {
-      console.error('Upload error:', error)
+      if (error) {
+        console.error('Upload error:', error)
+        if (error.message.includes('size') || error.message.includes('large')) {
+          alert('File too large to upload. Try a shorter recording.')
+        } else {
+          alert(`Upload failed: ${error.message}`)
+        }
+        return null
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('media')
+        .getPublicUrl(filePath)
+
+      return toCdnUrl(publicUrl)
+    } catch (err) {
+      console.error('Upload exception:', err)
+      alert('Upload failed. Please check your connection and try again.')
       return null
     }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('media')
-      .getPublicUrl(filePath)
-
-    return toCdnUrl(publicUrl)
   }, [])
 
   // Spotify song search (debounced)
@@ -293,6 +332,12 @@ export function ChatInput() {
     setShowMediaMenu(false)
 
     for (const file of Array.from(files)) {
+      const fileSizeMB = file.size / (1024 * 1024)
+      if (fileSizeMB > MAX_FILE_SIZE_MB) {
+        alert(`Voice note too large (${fileSizeMB.toFixed(1)}MB).\n\nMaximum size is ${MAX_FILE_SIZE_MB}MB. Try a shorter recording or lower quality file.`)
+        continue
+      }
+      
       const url = await uploadMedia(file)
       if (url) {
         await sendMessage({ type: 'audio', attrs: {} }, 'audio', url)
@@ -367,7 +412,7 @@ export function ChatInput() {
       }
       
       mediaRecorderRef.current = mediaRecorder
-      mediaRecorder.start(1000)
+      mediaRecorder.start(500) // Collect data every 500ms to avoid losing long recordings
       setIsRecording(true)
       setShowMediaMenu(false)
     } catch (err) {

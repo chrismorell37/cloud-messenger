@@ -462,6 +462,32 @@ body {
   @apply bg-dark-accent/20 ring-2 ring-dark-accent;
 }
 
+.emoji-button-add {
+  @apply text-xl font-light;
+  color: var(--color-muted);
+}
+
+.emoji-picker-input-row {
+  @apply flex items-center gap-2 px-3 pb-3;
+}
+
+.emoji-picker-input {
+  @apply flex-1 px-3 py-2 rounded-lg text-base;
+  background: var(--color-border);
+  color: var(--color-text);
+  border: none;
+  outline: none;
+}
+
+.emoji-picker-input:focus {
+  @apply ring-2 ring-dark-accent;
+}
+
+.emoji-picker-cancel {
+  @apply text-sm px-2 py-1 rounded;
+  color: var(--color-muted);
+}
+
 .context-menu-divider {
   @apply h-px bg-dark-border;
 }
@@ -779,6 +805,15 @@ body {
   @apply text-xs mt-2 opacity-70;
 }
 
+.bubble-transcription.transcribing {
+  @apply italic;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.bubble-transcription.error {
+  @apply opacity-50;
+}
+
 .bubble-gallery-container {
   @apply relative w-full;
 }
@@ -820,6 +855,24 @@ body {
 
 .bubble-spotify {
   @apply rounded-xl overflow-hidden;
+}
+
+.spotify-embed-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.spotify-touch-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+}
+
+.spotify-touch-overlay.allow-interaction {
+  pointer-events: none;
 }
 
 .bubble-instagram {
