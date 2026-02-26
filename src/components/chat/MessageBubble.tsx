@@ -31,7 +31,9 @@ export function MessageBubble({
   // Transcription state for audio messages
   const [isTranscribing, setIsTranscribing] = useState(false)
   const [transcriptionError, setTranscriptionError] = useState(false)
+  const [isTranscriptionExpanded, setIsTranscriptionExpanded] = useState(false)
   const transcriptionAttemptedRef = useRef(false)
+  const audioRef = useRef<HTMLAudioElement>(null)
 
   // Auto-transcribe audio messages that don't have transcription yet
   useEffect(() => {
@@ -234,22 +236,76 @@ export function MessageBubble({
       
       case 'audio': {
         const transcription = message.content.attrs?.transcription as string | undefined
+        const truncatedTranscription = transcription && transcription.length > 60 
+          ? transcription.substring(0, 60).trim() + '...' 
+          : transcription
+        
+        const handleSkip = (seconds: number) => {
+          if (audioRef.current) {
+            audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime + seconds)
+          }
+        }
+        
         return (
           <div className="bubble-audio">
-            <audio 
-              src={message.media_url || ''} 
-              controls 
-              className="w-full"
-            />
+            <div className="bubble-audio-controls">
+              <button 
+                onClick={() => handleSkip(-10)} 
+                className="bubble-audio-skip"
+                aria-label="Rewind 10 seconds"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                  <path d="M3 3v5h5"/>
+                  <text x="12" y="15" fontSize="7" fill="currentColor" stroke="none" textAnchor="middle">10</text>
+                </svg>
+              </button>
+              <audio 
+                ref={audioRef}
+                src={message.media_url || ''} 
+                controls 
+                className="bubble-audio-player"
+              />
+              <button 
+                onClick={() => handleSkip(10)} 
+                className="bubble-audio-skip"
+                aria-label="Forward 10 seconds"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                  <path d="M21 3v5h-5"/>
+                  <text x="12" y="15" fontSize="7" fill="currentColor" stroke="none" textAnchor="middle">10</text>
+                </svg>
+              </button>
+            </div>
             {isTranscribing && (
               <p className="bubble-transcription transcribing">
                 Transcribing...
               </p>
             )}
             {transcription && (
-              <p className="bubble-transcription">
-                {transcription}
-              </p>
+              <button
+                onClick={() => setIsTranscriptionExpanded(!isTranscriptionExpanded)}
+                className="bubble-transcription-toggle"
+              >
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  width="12" 
+                  height="12" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                  className={`bubble-transcription-arrow ${isTranscriptionExpanded ? 'expanded' : ''}`}
+                >
+                  <path d="m9 18 6-6-6-6"/>
+                </svg>
+                <span className="bubble-transcription-preview">
+                  {isTranscriptionExpanded ? transcription : `"${truncatedTranscription}"`}
+                </span>
+              </button>
             )}
             {transcriptionError && !transcription && (
               <p className="bubble-transcription error">
@@ -499,10 +555,11 @@ interface SpotifyEmbedProps {
 }
 
 function SpotifyEmbed({ embedUrl, onLongPress }: SpotifyEmbedProps) {
-  const [allowInteraction, setAllowInteraction] = useState(false)
+  const [isBlocking, setIsBlocking] = useState(false)
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchStartRef = useRef<{ x: number; y: number } | null>(null)
   const isLongPressRef = useRef(false)
+  const wrapperRef = useRef<HTMLDivElement>(null)
 
   const clearTimer = useCallback(() => {
     if (longPressTimer.current) {
@@ -511,46 +568,57 @@ function SpotifyEmbed({ embedUrl, onLongPress }: SpotifyEmbedProps) {
     }
   }, [])
 
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    const touch = e.touches[0]
-    touchStartRef.current = { x: touch.clientX, y: touch.clientY }
-    isLongPressRef.current = false
-    setAllowInteraction(false)
+  useEffect(() => {
+    const wrapper = wrapperRef.current
+    if (!wrapper) return
 
-    longPressTimer.current = setTimeout(() => {
-      isLongPressRef.current = true
-      if (navigator.vibrate) {
-        navigator.vibrate(10)
+    const handleTouchStart = (e: TouchEvent) => {
+      const touch = e.touches[0]
+      touchStartRef.current = { x: touch.clientX, y: touch.clientY }
+      isLongPressRef.current = false
+      setIsBlocking(true)
+
+      longPressTimer.current = setTimeout(() => {
+        isLongPressRef.current = true
+        if (navigator.vibrate) {
+          navigator.vibrate(10)
+        }
+        onLongPress()
+        setIsBlocking(false)
+      }, 500)
+    }
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!touchStartRef.current) return
+      const touch = e.touches[0]
+      const dx = Math.abs(touch.clientX - touchStartRef.current.x)
+      const dy = Math.abs(touch.clientY - touchStartRef.current.y)
+      if (dx > 10 || dy > 10) {
+        clearTimer()
+        setIsBlocking(false)
       }
-      onLongPress()
-    }, 500)
-  }, [onLongPress])
+    }
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!touchStartRef.current) return
-    const touch = e.touches[0]
-    const dx = Math.abs(touch.clientX - touchStartRef.current.x)
-    const dy = Math.abs(touch.clientY - touchStartRef.current.y)
-    if (dx > 10 || dy > 10) {
+    const handleTouchEnd = () => {
       clearTimer()
-    }
-  }, [clearTimer])
-
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    clearTimer()
-    
-    if (isLongPressRef.current) {
-      e.preventDefault()
-      return
+      setIsBlocking(false)
     }
 
-    // Allow the iframe to receive the interaction
-    setAllowInteraction(true)
-    setTimeout(() => setAllowInteraction(false), 300)
-  }, [clearTimer])
+    wrapper.addEventListener('touchstart', handleTouchStart, { passive: true })
+    wrapper.addEventListener('touchmove', handleTouchMove, { passive: true })
+    wrapper.addEventListener('touchend', handleTouchEnd, { passive: true })
+    wrapper.addEventListener('touchcancel', handleTouchEnd, { passive: true })
+
+    return () => {
+      wrapper.removeEventListener('touchstart', handleTouchStart)
+      wrapper.removeEventListener('touchmove', handleTouchMove)
+      wrapper.removeEventListener('touchend', handleTouchEnd)
+      wrapper.removeEventListener('touchcancel', handleTouchEnd)
+    }
+  }, [onLongPress, clearTimer])
 
   return (
-    <div className="spotify-embed-wrapper">
+    <div ref={wrapperRef} className="spotify-embed-wrapper">
       <iframe
         src={embedUrl}
         width="100%"
@@ -559,12 +627,7 @@ function SpotifyEmbed({ embedUrl, onLongPress }: SpotifyEmbedProps) {
         allow="encrypted-media"
         className="bubble-spotify rounded-lg"
       />
-      <div 
-        className={`spotify-touch-overlay ${allowInteraction ? 'allow-interaction' : ''}`}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      />
+      {isBlocking && <div className="spotify-touch-overlay" />}
     </div>
   )
 }

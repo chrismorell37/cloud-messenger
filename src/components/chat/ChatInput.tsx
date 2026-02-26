@@ -3,6 +3,7 @@ import { useDebouncedCallback } from 'use-debounce'
 import { useChatMessages } from '../../hooks/useChatMessages'
 import { useChatTyping } from '../../hooks/useChatTyping'
 import { useChatStore } from '../../stores/chatStore'
+import { useDraftUpload } from '../../hooks/useDraftUpload'
 import { supabase } from '../../lib/supabase'
 import { toCdnUrl } from '../../lib/cdn'
 import { searchSongs, getSpotifyUrl, extractSpotifyUrl, buildSpotifySearchUrl, type SongResult } from '../../lib/musicSearch'
@@ -23,6 +24,7 @@ export function ChatInput() {
   const { sendMessage } = useChatMessages()
   const { handleTyping, stopTyping } = useChatTyping()
   const { replyingTo, setReplyingTo } = useChatStore()
+  const { pendingDrafts, uploadWithRetry, retryDraft, removeDraft } = useDraftUpload()
   
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -399,15 +401,20 @@ export function ChatInput() {
       
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType })
-        const file = new File([audioBlob], `voice-${Date.now()}.webm`, { type: 'audio/webm' })
+        const mimeType = mediaRecorder.mimeType || 'audio/webm'
         
         setIsUploading(true)
-        const url = await uploadMedia(file)
-        if (url) {
-          await sendMessage({ type: 'audio', attrs: {} }, 'audio', url)
-        }
-        setIsUploading(false)
         
+        const result = await uploadWithRetry(audioBlob, recordingDuration, mimeType)
+        
+        if (result.success && result.url) {
+          const cdnUrl = toCdnUrl(result.url)
+          await sendMessage({ type: 'audio', attrs: {} }, 'audio', cdnUrl)
+        } else if (result.draftId) {
+          alert('Voice note saved as draft. You can retry uploading it from the + menu.')
+        }
+        
+        setIsUploading(false)
         stream.getTracks().forEach(track => track.stop())
       }
       
@@ -564,6 +571,9 @@ export function ChatInput() {
             <line x1="12" y1="5" x2="12" y2="19"/>
             <line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
+          {pendingDrafts.length > 0 && (
+            <span className="chat-drafts-badge">{pendingDrafts.length}</span>
+          )}
         </button>
 
         {showMediaMenu && (
@@ -647,6 +657,72 @@ export function ChatInput() {
               </svg>
               Search Song
             </button>
+            
+            {/* Pending drafts section */}
+            {pendingDrafts.length > 0 && (
+              <>
+                <div className="chat-media-menu-divider" />
+                <div className="chat-drafts-header">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <span>Pending Drafts ({pendingDrafts.length})</span>
+                </div>
+                {pendingDrafts.map((draft) => (
+                  <div key={draft.id} className="chat-draft-item">
+                    <div className="chat-draft-info">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                        <line x1="12" y1="19" x2="12" y2="22"/>
+                      </svg>
+                      <span>Voice note ({Math.floor(draft.duration / 60)}:{(draft.duration % 60).toString().padStart(2, '0')})</span>
+                    </div>
+                    <div className="chat-draft-actions">
+                      <button
+                        onClick={async () => {
+                          setIsUploading(true)
+                          const result = await retryDraft(draft.id)
+                          if (result.success && result.url) {
+                            const cdnUrl = toCdnUrl(result.url)
+                            await sendMessage({ type: 'audio', attrs: {} }, 'audio', cdnUrl)
+                          } else {
+                            alert('Upload failed. Please try again later.')
+                          }
+                          setIsUploading(false)
+                        }}
+                        className="chat-draft-retry"
+                        title="Retry upload"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                          <path d="M21 3v5h-5"/>
+                          <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                          <path d="M8 16H3v5"/>
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm('Delete this draft?')) {
+                            removeDraft(draft.id)
+                          }
+                        }}
+                        className="chat-draft-delete"
+                        title="Delete draft"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M3 6h18"/>
+                          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         )}
 
