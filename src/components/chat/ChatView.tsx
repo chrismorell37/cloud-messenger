@@ -9,16 +9,14 @@ interface ChatViewProps {
   onSignOut: () => void
 }
 
-const USER1_NAME = import.meta.env.VITE_USER1_NAME || 'User 1'
-const USER2_NAME = import.meta.env.VITE_USER2_NAME || 'User 2'
-
 export function ChatView({ onSignOut }: ChatViewProps) {
   const { currentUser, otherUserTyping } = useChatStore()
   
   useChatMessages()
   useChatTyping()
 
-  const otherUserName = currentUser?.id === 'user1' ? USER2_NAME : USER1_NAME
+  // If current user is S (user1), other user is C. If current user is C (user2), other user is S.
+  const otherUserName = currentUser?.id === 'user1' ? 'C' : 'S'
 
   return (
     <div className="chat-view">

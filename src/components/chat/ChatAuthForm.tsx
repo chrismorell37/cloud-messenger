@@ -2,8 +2,6 @@ import { useState } from 'react'
 import type { ChatUser } from '../../stores/chatStore'
 
 const APP_PASSWORD = import.meta.env.VITE_APP_PASSWORD
-const USER1_NAME = import.meta.env.VITE_USER1_NAME || 'S'
-const USER2_NAME = import.meta.env.VITE_USER2_NAME || 'C'
 
 interface ChatAuthFormProps {
   onSuccess: (user: ChatUser) => void
@@ -31,8 +29,7 @@ export default function ChatAuthForm({ onSuccess }: ChatAuthFormProps) {
     setIsLoading(false)
   }
 
-  const handleUserSelect = (userId: 'user1' | 'user2') => {
-    const displayName = userId === 'user1' ? USER1_NAME : USER2_NAME
+  const handleUserSelect = (userId: 'user1' | 'user2', displayName: string) => {
     const user: ChatUser = {
       id: userId,
       displayName
@@ -100,7 +97,7 @@ export default function ChatAuthForm({ onSuccess }: ChatAuthFormProps) {
           ) : (
             <div className="space-y-3">
               <button
-                onClick={() => handleUserSelect('user1')}
+                onClick={() => handleUserSelect('user1', 'S')}
                 className="w-full py-4 px-4 bg-blue-500 hover:bg-blue-600 
                          text-white text-xl font-semibold rounded-lg
                          transition-colors"
@@ -109,7 +106,7 @@ export default function ChatAuthForm({ onSuccess }: ChatAuthFormProps) {
               </button>
               
               <button
-                onClick={() => handleUserSelect('user2')}
+                onClick={() => handleUserSelect('user2', 'C')}
                 className="w-full py-4 px-4 bg-pink-500 hover:bg-pink-600 
                          text-white text-xl font-semibold rounded-lg
                          transition-colors"
