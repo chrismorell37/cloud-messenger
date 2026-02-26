@@ -323,7 +323,7 @@ export function MessageBubble({
           ? spotifyUri.replace('open.spotify.com', 'open.spotify.com/embed')
           : `https://open.spotify.com/embed/${spotifyUri.replace('spotify:', '').replace(/:/g, '/')}`
         return (
-          <SpotifyEmbed embedUrl={embedUrl} onLongPress={handleLongPress} />
+          <SpotifyEmbed embedUrl={embedUrl} />
         )
       }
       
@@ -549,59 +549,9 @@ function MessageBubbleTouchHandler({
   )
 }
 
-interface SpotifyEmbedProps {
-  embedUrl: string
-  onLongPress: () => void
-}
-
-function SpotifyEmbed({ embedUrl, onLongPress }: SpotifyEmbedProps) {
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null)
-  const longPressTriggeredRef = useRef(false)
-
-  const clearTimer = useCallback(() => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current)
-      longPressTimer.current = null
-    }
-  }, [])
-
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    const touch = e.touches[0]
-    touchStartRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() }
-    longPressTriggeredRef.current = false
-
-    longPressTimer.current = setTimeout(() => {
-      longPressTriggeredRef.current = true
-      if (navigator.vibrate) {
-        navigator.vibrate(10)
-      }
-      onLongPress()
-    }, 600)
-  }, [onLongPress])
-
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!touchStartRef.current) return
-    const touch = e.touches[0]
-    const dx = Math.abs(touch.clientX - touchStartRef.current.x)
-    const dy = Math.abs(touch.clientY - touchStartRef.current.y)
-    if (dx > 10 || dy > 10) {
-      clearTimer()
-    }
-  }, [clearTimer])
-
-  const handleTouchEnd = useCallback(() => {
-    clearTimer()
-  }, [clearTimer])
-
+function SpotifyEmbed({ embedUrl }: { embedUrl: string }) {
   return (
-    <div 
-      className="spotify-embed-wrapper"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onTouchCancel={handleTouchEnd}
-    >
+    <div className="spotify-embed-wrapper">
       <iframe
         src={embedUrl}
         width="100%"
@@ -609,7 +559,6 @@ function SpotifyEmbed({ embedUrl, onLongPress }: SpotifyEmbedProps) {
         frameBorder="0"
         allow="encrypted-media"
         className="bubble-spotify rounded-lg"
-        style={{ pointerEvents: 'auto' }}
       />
     </div>
   )

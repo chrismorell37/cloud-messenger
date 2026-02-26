@@ -933,7 +933,8 @@ body {
   width: 100%;
 }
 
-.spotify-touch-overlay {
+.spotify-embed-wrapper::before {
+  content: '';
   position: absolute;
   top: 0;
   left: 0;
