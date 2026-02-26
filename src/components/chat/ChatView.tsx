@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { useChatStore } from '../../stores/chatStore'
 import { useChatMessages } from '../../hooks/useChatMessages'
 import { useChatTyping } from '../../hooks/useChatTyping'
@@ -12,11 +13,17 @@ interface ChatViewProps {
 export function ChatView({ onSignOut }: ChatViewProps) {
   const { currentUser, otherUserTyping } = useChatStore()
   
-  useChatMessages()
+  const { clearAllMessages } = useChatMessages()
   useChatTyping()
 
   // If current user is S (user1), other user is C. If current user is C (user2), other user is S.
   const otherUserName = currentUser?.id === 'user1' ? 'C' : 'S'
+
+  const handleClearHistory = useCallback(async () => {
+    if (confirm('Delete all chat history? This cannot be undone.')) {
+      await clearAllMessages()
+    }
+  }, [clearAllMessages])
 
   return (
     <div className="chat-view">
@@ -31,12 +38,20 @@ export function ChatView({ onSignOut }: ChatViewProps) {
             )}
           </div>
           
-          <button
-            onClick={onSignOut}
-            className="chat-header-lock"
-          >
-            Lock
-          </button>
+          <div className="chat-header-actions">
+            <button
+              onClick={handleClearHistory}
+              className="chat-header-btn"
+            >
+              Clear
+            </button>
+            <button
+              onClick={onSignOut}
+              className="chat-header-btn"
+            >
+              Lock
+            </button>
+          </div>
         </div>
       </header>
 

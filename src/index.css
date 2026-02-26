@@ -601,12 +601,16 @@ body {
   color: var(--color-muted);
 }
 
-.chat-header-lock {
+.chat-header-actions {
+  @apply flex items-center gap-4;
+}
+
+.chat-header-btn {
   @apply text-sm transition-colors;
   color: var(--color-muted);
 }
 
-.chat-header-lock:hover {
+.chat-header-btn:hover {
   color: var(--color-text);
 }
 

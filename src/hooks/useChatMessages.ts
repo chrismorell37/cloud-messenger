@@ -128,6 +128,21 @@ export function useChatMessages() {
     updateMessage(messageId, { content: updatedContent } as Partial<ChatMessage>)
   }, [messages, updateMessage])
 
+  const clearAllMessages = useCallback(async () => {
+    const { error } = await supabase
+      .from('chat_messages' as 'messages')
+      .delete()
+      .neq('id' as 'id', '00000000-0000-0000-0000-000000000000')
+
+    if (error) {
+      console.error('Error clearing messages:', error)
+      return false
+    }
+
+    setMessages([])
+    return true
+  }, [setMessages])
+
   useEffect(() => {
     loadMessages()
   }, [loadMessages])
@@ -164,13 +179,24 @@ export function useChatMessages() {
           updateMessage(updated.id, updated)
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'chat_messages',
+        },
+        () => {
+          loadMessages()
+        }
+      )
       .subscribe()
 
     return () => {
       isSubscribedRef.current = false
       supabase.removeChannel(channel)
     }
-  }, [currentUser?.id, addMessage, updateMessage])
+  }, [currentUser?.id, addMessage, updateMessage, loadMessages])
 
   return {
     messages,
@@ -179,5 +205,6 @@ export function useChatMessages() {
     deleteMessage,
     editMessage,
     loadMessages,
+    clearAllMessages,
   }
 }
