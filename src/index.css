@@ -860,43 +860,28 @@ body {
 
 /* Reply Thread - iMessage Style */
 .reply-thread-container {
-  @apply flex flex-col mb-1;
-  position: relative;
-}
-
-.reply-thread-container.quoted-own {
-  @apply items-end mr-2;
-}
-
-.reply-thread-container.quoted-other {
-  @apply items-start ml-2;
+  @apply relative mb-2;
+  max-width: 75%;
 }
 
 .reply-quoted-bubble {
   @apply px-3 py-1.5 rounded-2xl text-sm;
   background: var(--color-border);
   color: var(--color-muted);
-  max-width: 70%;
   opacity: 0.7;
 }
 
 .reply-quoted-text {
-  @apply block truncate;
+  @apply block;
 }
 
 .reply-connector {
-  @apply w-6 h-10;
-  color: var(--color-border);
+  width: 24px;
+  height: 32px;
+  color: var(--color-muted);
   position: absolute;
-  bottom: -8px;
-}
-
-.reply-thread-container.quoted-own .reply-connector {
-  right: 8px;
-}
-
-.reply-thread-container.quoted-other .reply-connector {
-  left: 8px;
+  bottom: -24px;
+  opacity: 0.6;
 }
 
 /* Reply preview above input */
