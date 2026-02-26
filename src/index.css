@@ -477,13 +477,17 @@ body {
 .emoji-picker-full {
   @apply flex flex-col;
   max-height: 280px;
+  width: 320px;
 }
 
 .emoji-category-tabs {
-  @apply flex gap-1 px-2 py-2 border-b overflow-x-auto;
+  @apply flex gap-2 px-3 py-2 border-b;
   border-color: var(--color-border);
+  overflow-x: auto;
+  overflow-y: visible;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  min-height: 44px;
 }
 
 .emoji-category-tabs::-webkit-scrollbar {
@@ -491,10 +495,14 @@ body {
 }
 
 .emoji-category-tab {
-  @apply flex-shrink-0 w-8 h-8 flex items-center justify-center text-lg
-         rounded-md transition-all;
+  @apply flex-shrink-0 flex items-center justify-center rounded-md transition-all;
+  width: 32px;
+  height: 32px;
+  font-size: 20px;
+  line-height: 1;
   background: transparent;
   border: none;
+  padding: 0;
 }
 
 .emoji-category-tab:hover {
