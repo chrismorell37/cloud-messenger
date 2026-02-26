@@ -59,6 +59,10 @@ export function useChatMessages() {
 
     const sentMessage = data as unknown as ChatMessage
     addMessage(sentMessage)
+    
+    // Fire-and-forget notification (don't block on response)
+    fetch('/api/notify', { method: 'POST' }).catch(() => {})
+    
     return sentMessage
   }, [currentUser, addMessage])
 
