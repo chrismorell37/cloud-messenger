@@ -666,8 +666,14 @@ body {
   @apply items-start;
 }
 
-.message-bubble-touch-area.pressing {
-  animation: media-wiggle 0.15s ease-in-out;
+.message-bubble-touch-area.zoomed {
+  animation: bubble-zoom-in 0.2s ease-out forwards;
+}
+
+@keyframes bubble-zoom-in {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+  100% { transform: scale(1.02); }
 }
 
 /* Message Bubble */
@@ -707,38 +713,40 @@ body {
   @apply text-xs ml-1 opacity-60;
 }
 
-/* Bubble Edit Mode */
-.bubble-edit {
+/* Bubble Edit Mode - iMessage Style */
+.bubble-edit-inline {
   @apply w-full;
 }
 
-.bubble-edit-input {
-  @apply w-full px-2 py-1 rounded-lg text-base resize-none;
-  background: rgba(0, 0, 0, 0.1);
+.bubble-edit-row {
+  @apply flex justify-between mb-2;
+}
+
+.bubble-edit-btn {
+  @apply text-sm font-medium px-2 py-0.5 rounded;
+}
+
+.bubble-edit-btn.cancel {
+  @apply opacity-80;
+}
+
+.bubble-edit-btn.save {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.bubble-edit-textarea {
+  @apply w-full text-base leading-relaxed resize-none;
+  background: transparent;
   color: inherit;
   border: none;
-  min-width: 200px;
+  outline: none;
+  caret-color: white;
+  min-height: 1.5em;
+  field-sizing: content;
 }
 
-.bubble-edit-input:focus {
+.bubble-edit-textarea:focus {
   @apply outline-none;
-}
-
-.bubble-edit-actions {
-  @apply flex justify-end gap-2 mt-2;
-}
-
-.bubble-edit-cancel,
-.bubble-edit-save {
-  @apply px-3 py-1 text-sm font-medium rounded-lg;
-}
-
-.bubble-edit-cancel {
-  @apply opacity-70;
-}
-
-.bubble-edit-save {
-  background: rgba(255, 255, 255, 0.2);
 }
 
 .bubble-image {

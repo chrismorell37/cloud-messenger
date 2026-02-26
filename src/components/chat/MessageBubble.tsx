@@ -107,22 +107,21 @@ export function MessageBubble({
       case 'text':
         if (isEditing) {
           return (
-            <div className="bubble-edit">
-              <textarea
-                value={editText}
-                onChange={(e) => setEditText(e.target.value)}
-                className="bubble-edit-input"
-                autoFocus
-                rows={2}
-              />
-              <div className="bubble-edit-actions">
-                <button onClick={handleEditCancel} className="bubble-edit-cancel">
+            <div className="bubble-edit-inline">
+              <div className="bubble-edit-row">
+                <button onClick={handleEditCancel} className="bubble-edit-btn cancel">
                   Cancel
                 </button>
-                <button onClick={handleEditSave} className="bubble-edit-save">
+                <button onClick={handleEditSave} className="bubble-edit-btn save">
                   Save
                 </button>
               </div>
+              <textarea
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                className="bubble-edit-textarea"
+                autoFocus
+              />
             </div>
           )
         }
@@ -268,6 +267,7 @@ export function MessageBubble({
         onLongPress={handleLongPress}
         onDoubleTap={handleDoubleTap}
         isOwnMessage={isOwnMessage}
+        isMenuOpen={showContextMenu}
       >
         {repliedToMessage && (
           <div className={`message-reply-preview ${isOwnMessage ? 'own' : 'other'}`}>
@@ -345,6 +345,7 @@ interface TouchHandlerProps {
   onLongPress: () => void
   onDoubleTap: () => void
   isOwnMessage: boolean
+  isMenuOpen: boolean
 }
 
 function MessageBubbleTouchHandler({ 
@@ -352,8 +353,8 @@ function MessageBubbleTouchHandler({
   onLongPress, 
   onDoubleTap,
   isOwnMessage,
+  isMenuOpen,
 }: TouchHandlerProps) {
-  const [isPressing, setIsPressing] = useState(false)
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastTapRef = useRef<number>(0)
   const touchStartRef = useRef<{ x: number; y: number } | null>(null)
@@ -364,7 +365,12 @@ function MessageBubbleTouchHandler({
       clearTimeout(longPressTimer.current)
       longPressTimer.current = null
     }
-    setIsPressing(false)
+  }, [])
+
+  const triggerHaptic = useCallback(() => {
+    if (navigator.vibrate) {
+      navigator.vibrate(10)
+    }
   }, [])
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -374,11 +380,10 @@ function MessageBubbleTouchHandler({
 
     longPressTimer.current = setTimeout(() => {
       isLongPressRef.current = true
-      setIsPressing(true)
+      triggerHaptic()
       onLongPress()
-      setTimeout(() => setIsPressing(false), 150)
-    }, 800)
-  }, [onLongPress])
+    }, 500)
+  }, [onLongPress, triggerHaptic])
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!touchStartRef.current) return
@@ -409,7 +414,7 @@ function MessageBubbleTouchHandler({
 
   return (
     <div 
-      className={`message-bubble-touch-area ${isOwnMessage ? 'own' : 'other'} ${isPressing ? 'pressing' : ''}`}
+      className={`message-bubble-touch-area ${isOwnMessage ? 'own' : 'other'} ${isMenuOpen ? 'zoomed' : ''}`}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
