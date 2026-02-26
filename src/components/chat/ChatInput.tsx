@@ -143,6 +143,14 @@ export function ChatInput() {
     }
   }, [sendMessage])
 
+  const resetInput = useCallback(() => {
+    setText('')
+    setReplyingTo(null)
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto'
+    }
+  }, [setReplyingTo])
+
   const handleSend = useCallback(async () => {
     const trimmedText = text.trim()
     if (!trimmedText) return
@@ -153,8 +161,7 @@ export function ChatInput() {
     const spotifyUrl = extractSpotifyUrl(trimmedText)
     if (spotifyUrl) {
       stopTyping()
-      setText('')
-      setReplyingTo(null)
+      resetInput()
       await sendMessage(
         { type: 'spotify', attrs: { spotifyUri: spotifyUrl } },
         'spotify',
@@ -168,8 +175,7 @@ export function ChatInput() {
     const instagramUrl = extractInstagramUrl(trimmedText)
     if (instagramUrl) {
       stopTyping()
-      setText('')
-      setReplyingTo(null)
+      resetInput()
       await sendMessage(
         { type: 'instagram', attrs: { instagramUrl } },
         'instagram',
@@ -181,15 +187,14 @@ export function ChatInput() {
 
     // Regular text message
     stopTyping()
-    setText('')
-    setReplyingTo(null)
+    resetInput()
     await sendMessage(
       { type: 'text', text: trimmedText },
       'text',
       undefined,
       replyToId
     )
-  }, [text, sendMessage, stopTyping, replyingTo, setReplyingTo])
+  }, [text, sendMessage, stopTyping, replyingTo, resetInput])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {

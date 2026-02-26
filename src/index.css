@@ -858,30 +858,45 @@ body {
   -webkit-user-select: none;
 }
 
-/* Reply preview in message bubble */
-.message-reply-preview {
-  @apply flex items-center gap-2 px-3 py-1.5 mb-1 rounded-lg text-xs;
-  background: rgba(0, 0, 0, 0.1);
-  border-left: 2px solid var(--color-muted);
+/* Reply Thread - iMessage Style */
+.reply-thread-container {
+  @apply flex flex-col mb-1;
+  position: relative;
 }
 
-.message-reply-preview.own {
-  background: rgba(255, 255, 255, 0.15);
-  border-left-color: rgba(255, 255, 255, 0.5);
+.reply-thread-container.quoted-own {
+  @apply items-end mr-2;
 }
 
-.message-reply-preview.other {
+.reply-thread-container.quoted-other {
+  @apply items-start ml-2;
+}
+
+.reply-quoted-bubble {
+  @apply px-3 py-1.5 rounded-2xl text-sm;
   background: var(--color-border);
-  border-left-color: var(--color-muted);
+  color: var(--color-muted);
+  max-width: 70%;
+  opacity: 0.7;
 }
 
-.reply-preview-sender {
-  @apply font-semibold;
+.reply-quoted-text {
+  @apply block truncate;
 }
 
-.reply-preview-text {
-  @apply truncate;
-  max-width: 200px;
+.reply-connector {
+  @apply w-6 h-10;
+  color: var(--color-border);
+  position: absolute;
+  bottom: -8px;
+}
+
+.reply-thread-container.quoted-own .reply-connector {
+  right: 8px;
+}
+
+.reply-thread-container.quoted-other .reply-connector {
+  left: 8px;
 }
 
 /* Reply preview above input */

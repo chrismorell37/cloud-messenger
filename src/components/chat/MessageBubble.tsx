@@ -263,20 +263,12 @@ export function MessageBubble({
         <span className="message-sender-name">{senderName}</span>
       )}
       
-      <MessageBubbleTouchHandler
-        onLongPress={handleLongPress}
-        onDoubleTap={handleDoubleTap}
-        isOwnMessage={isOwnMessage}
-        isMenuOpen={showContextMenu}
-      >
-        {repliedToMessage && (
-          <div className={`message-reply-preview ${isOwnMessage ? 'own' : 'other'}`}>
-            <span className="reply-preview-sender">
-              {repliedToMessage.sender_id === 'user1' ? 'S' : 'C'}
-            </span>
-            <span className="reply-preview-text">
+      {repliedToMessage && (
+        <div className={`reply-thread-container ${repliedToMessage.sender_id === currentUser?.id ? 'quoted-own' : 'quoted-other'}`}>
+          <div className="reply-quoted-bubble">
+            <span className="reply-quoted-text">
               {repliedToMessage.message_type === 'text' 
-                ? (repliedToMessage.content.text || '').slice(0, 50) + ((repliedToMessage.content.text || '').length > 50 ? '...' : '')
+                ? (repliedToMessage.content.text || '').slice(0, 60) + ((repliedToMessage.content.text || '').length > 60 ? '...' : '')
                 : repliedToMessage.message_type === 'image' ? 'Photo'
                 : repliedToMessage.message_type === 'video' ? 'Video'
                 : repliedToMessage.message_type === 'audio' ? 'Voice note'
@@ -285,7 +277,27 @@ export function MessageBubble({
                 : 'Message'}
             </span>
           </div>
-        )}
+          <svg className="reply-connector" viewBox="0 0 24 40" fill="none">
+            <path 
+              d={repliedToMessage.sender_id === currentUser?.id 
+                ? "M12 0 L12 20 Q12 32 0 32" 
+                : "M12 0 L12 20 Q12 32 24 32"
+              } 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round"
+              fill="none"
+            />
+          </svg>
+        </div>
+      )}
+      
+      <MessageBubbleTouchHandler
+        onLongPress={handleLongPress}
+        onDoubleTap={handleDoubleTap}
+        isOwnMessage={isOwnMessage}
+        isMenuOpen={showContextMenu}
+      >
         <div className={`message-bubble ${isOwnMessage ? 'own' : 'other'} ${message.message_type !== 'text' ? 'media' : ''} ${isEditing ? 'editing' : ''}`}>
           {renderContent()}
           
