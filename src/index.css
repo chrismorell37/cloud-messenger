@@ -689,6 +689,11 @@ body {
   border-bottom-right-radius: 4px;
 }
 
+.message-bubble.own.editing {
+  background: white;
+  color: #1a1a1a;
+}
+
 .message-bubble.other {
   background: var(--color-surface);
   color: var(--color-text);
@@ -724,14 +729,16 @@ body {
 
 .bubble-edit-btn {
   @apply text-sm font-medium px-2 py-0.5 rounded;
+  color: #007AFF;
 }
 
 .bubble-edit-btn.cancel {
-  @apply opacity-80;
+  @apply opacity-70;
 }
 
 .bubble-edit-btn.save {
-  background: rgba(255, 255, 255, 0.2);
+  background: #007AFF;
+  color: white;
 }
 
 .bubble-edit-textarea {
@@ -740,7 +747,7 @@ body {
   color: inherit;
   border: none;
   outline: none;
-  caret-color: white;
+  caret-color: #1a1a1a;
   min-height: 1.5em;
   field-sizing: content;
 }

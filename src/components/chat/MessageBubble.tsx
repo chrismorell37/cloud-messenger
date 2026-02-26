@@ -286,7 +286,7 @@ export function MessageBubble({
             </span>
           </div>
         )}
-        <div className={`message-bubble ${isOwnMessage ? 'own' : 'other'} ${message.message_type !== 'text' ? 'media' : ''}`}>
+        <div className={`message-bubble ${isOwnMessage ? 'own' : 'other'} ${message.message_type !== 'text' ? 'media' : ''} ${isEditing ? 'editing' : ''}`}>
           {renderContent()}
           
           {reactionEntries.length > 0 && (
