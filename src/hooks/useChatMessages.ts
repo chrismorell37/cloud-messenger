@@ -8,10 +8,12 @@ export function useChatMessages() {
     setMessages, 
     addMessage, 
     updateMessage,
+    removeMessage,
     currentUser 
   } = useChatStore()
   
   const isSubscribedRef = useRef(false)
+  const localUpdateIdsRef = useRef<Set<string>>(new Set())
 
   const loadMessages = useCallback(async () => {
     const { data, error } = await supabase
@@ -58,7 +60,13 @@ export function useChatMessages() {
     }
 
     const sentMessage = data as unknown as ChatMessage
+    localUpdateIdsRef.current.add(sentMessage.id)
     addMessage(sentMessage)
+    
+    // Clear from local updates after a short delay
+    setTimeout(() => {
+      localUpdateIdsRef.current.delete(sentMessage.id)
+    }, 2000)
     
     // Fire-and-forget notification (don't block on response)
     fetch('/api/notify', { method: 'POST' }).catch(() => {})
@@ -96,7 +104,11 @@ export function useChatMessages() {
       return
     }
 
+    localUpdateIdsRef.current.add(messageId)
     updateMessage(messageId, { reactions })
+    setTimeout(() => {
+      localUpdateIdsRef.current.delete(messageId)
+    }, 2000)
   }, [currentUser, messages, updateMessage])
 
   const deleteMessage = useCallback(async (messageId: string) => {
@@ -110,7 +122,11 @@ export function useChatMessages() {
       return
     }
 
+    localUpdateIdsRef.current.add(messageId)
     updateMessage(messageId, { is_deleted: true })
+    setTimeout(() => {
+      localUpdateIdsRef.current.delete(messageId)
+    }, 2000)
   }, [updateMessage])
 
   const editMessage = useCallback(async (messageId: string, newText: string) => {
@@ -129,7 +145,11 @@ export function useChatMessages() {
       return
     }
 
+    localUpdateIdsRef.current.add(messageId)
     updateMessage(messageId, { content: updatedContent } as Partial<ChatMessage>)
+    setTimeout(() => {
+      localUpdateIdsRef.current.delete(messageId)
+    }, 2000)
   }, [messages, updateMessage])
 
   const updateMessageContent = useCallback(async (messageId: string, attrs: Record<string, unknown>) => {
@@ -151,7 +171,11 @@ export function useChatMessages() {
       return
     }
 
+    localUpdateIdsRef.current.add(messageId)
     updateMessage(messageId, { content: updatedContent } as Partial<ChatMessage>)
+    setTimeout(() => {
+      localUpdateIdsRef.current.delete(messageId)
+    }, 2000)
   }, [messages, updateMessage])
 
   const clearAllMessages = useCallback(async () => {
@@ -188,6 +212,11 @@ export function useChatMessages() {
         },
         (payload) => {
           const newMessage = payload.new as ChatMessage
+          // Skip if this is a local update we just made
+          if (localUpdateIdsRef.current.has(newMessage.id)) {
+            return
+          }
+          // Skip if from current user (already added locally)
           if (newMessage.sender_id !== currentUser?.id) {
             addMessage(newMessage)
           }
@@ -202,6 +231,10 @@ export function useChatMessages() {
         },
         (payload) => {
           const updated = payload.new as ChatMessage
+          // Skip if this is a local update we just made
+          if (localUpdateIdsRef.current.has(updated.id)) {
+            return
+          }
           updateMessage(updated.id, updated)
         }
       )
@@ -212,8 +245,11 @@ export function useChatMessages() {
           schema: 'public',
           table: 'chat_messages',
         },
-        () => {
-          loadMessages()
+        (payload) => {
+          const deleted = payload.old as { id?: string }
+          if (deleted?.id) {
+            removeMessage(deleted.id)
+          }
         }
       )
       .subscribe()

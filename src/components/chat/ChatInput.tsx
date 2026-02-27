@@ -197,44 +197,48 @@ export function ChatInput() {
     if (!trimmedText) return
 
     const replyToId = replyingTo?.id
+    stopTyping()
 
     // Check for Spotify URL
     const spotifyUrl = extractSpotifyUrl(trimmedText)
     if (spotifyUrl) {
-      stopTyping()
-      resetInput()
-      await sendMessage(
+      const result = await sendMessage(
         { type: 'spotify', attrs: { spotifyUri: spotifyUrl } },
         'spotify',
         undefined,
         replyToId
       )
+      if (result) {
+        resetInput()
+      }
       return
     }
 
     // Check for Instagram URL
     const instagramUrl = extractInstagramUrl(trimmedText)
     if (instagramUrl) {
-      stopTyping()
-      resetInput()
-      await sendMessage(
+      const result = await sendMessage(
         { type: 'instagram', attrs: { instagramUrl } },
         'instagram',
         undefined,
         replyToId
       )
+      if (result) {
+        resetInput()
+      }
       return
     }
 
     // Regular text message
-    stopTyping()
-    resetInput()
-    await sendMessage(
+    const result = await sendMessage(
       { type: 'text', text: trimmedText },
       'text',
       undefined,
       replyToId
     )
+    if (result) {
+      resetInput()
+    }
   }, [text, sendMessage, stopTyping, replyingTo, resetInput])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {

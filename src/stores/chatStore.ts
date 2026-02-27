@@ -40,6 +40,7 @@ interface ChatState {
   addMessage: (message: ChatMessage) => void
   updateMessage: (id: string, updates: Partial<ChatMessage>) => void
   deleteMessage: (id: string) => void
+  removeMessage: (id: string) => void
   setCurrentUser: (user: ChatUser | null) => void
   setIsAuthenticated: (isAuthenticated: boolean) => void
   setIsLoading: (isLoading: boolean) => void
@@ -64,9 +65,13 @@ export const useChatStore = create<ChatState>((set) => ({
   
   setMessages: (messages) => set({ messages }),
   
-  addMessage: (message) => set((state) => ({
-    messages: [...state.messages, message]
-  })),
+  addMessage: (message) => set((state) => {
+    // Deduplication: check if message already exists
+    if (state.messages.some((m) => m.id === message.id)) {
+      return state
+    }
+    return { messages: [...state.messages, message] }
+  }),
   
   updateMessage: (id, updates) => set((state) => ({
     messages: state.messages.map((msg) =>
@@ -78,6 +83,10 @@ export const useChatStore = create<ChatState>((set) => ({
     messages: state.messages.map((msg) =>
       msg.id === id ? { ...msg, is_deleted: true } : msg
     )
+  })),
+  
+  removeMessage: (id) => set((state) => ({
+    messages: state.messages.filter((msg) => msg.id !== id)
   })),
   
   setCurrentUser: (user) => set({ currentUser: user }),
