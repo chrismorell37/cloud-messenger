@@ -938,7 +938,7 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
+  right: 120px; /* Leave right side uncovered for player controls (play, +, ...) */
   bottom: 0;
   z-index: 1;
   background: transparent;
