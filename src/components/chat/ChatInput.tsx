@@ -577,7 +577,12 @@ export function ChatInput() {
         </button>
 
         {showMediaMenu && (
-          <div className="chat-media-menu">
+          <>
+            <div 
+              className="chat-media-menu-backdrop" 
+              onClick={() => setShowMediaMenu(false)} 
+            />
+            <div className="chat-media-menu">
             <button onClick={() => {
               fileInputRef.current?.click()
               setShowMediaMenu(false)
@@ -724,6 +729,7 @@ export function ChatInput() {
               </>
             )}
           </div>
+          </>
         )}
 
         <textarea
