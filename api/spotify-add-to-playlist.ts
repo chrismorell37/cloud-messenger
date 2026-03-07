@@ -90,9 +90,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         : addRes.status === 404
           ? 'Playlist or track not found. Try choosing the playlist again from the menu.'
           : "Couldn't add to playlist. Check that you're connected, a playlist is selected, and the track is available."
-    return res
-      .status(addRes.status)
-      .json({ error: spotifyMessage || fallback })
+    // Prefer our friendly 403/404 messages over Spotify's generic "Forbidden" or "Not Found"
+    const genericSpotify = /^(forbidden|not found|unauthorized)$/i
+    const message =
+      addRes.status === 403 || addRes.status === 404
+        ? fallback
+        : spotifyMessage && !genericSpotify.test(spotifyMessage.trim())
+          ? spotifyMessage
+          : spotifyMessage || fallback
+    return res.status(addRes.status).json({ error: message })
   }
 
   return res.status(200).json({ ok: true })
