@@ -99,7 +99,51 @@ export function ChatView({ onSignOut }: ChatViewProps) {
                   </>
                 )}
               </div>
-            ) : null}
+            ) : (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setShowPlaylistPicker(true)
+                    const list = await listPlaylists()
+                    setPlaylistList(list)
+                  }}
+                  disabled={playlistsLoading}
+                  className="chat-header-btn text-green-500 hover:text-green-400 disabled:opacity-50"
+                >
+                  {playlistsLoading ? 'Loading…' : 'Change playlist'}
+                </button>
+                {showPlaylistPicker && playlistList.length > 0 && (
+                  <>
+                    <div className="absolute top-full right-0 mt-1 py-2 min-w-[200px] max-h-60 overflow-y-auto rounded-lg border border-dark-border bg-dark-surface shadow-lg z-50">
+                      {playlistList.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={async () => {
+                            await savePlaylist(p.id)
+                            setShowPlaylistPicker(false)
+                            setPlaylistList([])
+                          }}
+                          className="w-full px-3 py-2 text-left text-sm text-dark-text hover:bg-dark-border/50"
+                        >
+                          {p.name}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      className="fixed inset-0 z-40"
+                      aria-label="Close"
+                      onClick={() => {
+                        setShowPlaylistPicker(false)
+                        setPlaylistList([])
+                      }}
+                    />
+                  </>
+                )}
+              </div>
+            )}
             <button
               onClick={handleClearHistory}
               className="chat-header-btn"
