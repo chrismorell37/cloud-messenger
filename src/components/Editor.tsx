@@ -894,18 +894,23 @@ export default function Editor() {
               ) : (
                 <div>
                   <p className="text-sm text-dark-muted mb-2">Connected. Use &quot;Add to my playlist&quot; on any track.</p>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      setShowPlaylistPicker(true)
-                      const list = await listPlaylists()
-                      setPlaylistList(list)
-                    }}
-                    disabled={playlistsLoading}
-                    className="text-sm font-medium text-green-500 hover:text-green-400 disabled:opacity-50"
-                  >
-                    {playlistsLoading ? 'Loading…' : 'Change playlist'}
-                  </button>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setShowPlaylistPicker(true)
+                        const list = await listPlaylists()
+                        setPlaylistList(list)
+                      }}
+                      disabled={playlistsLoading}
+                      className="text-sm font-medium text-green-500 hover:text-green-400 disabled:opacity-50"
+                    >
+                      {playlistsLoading ? 'Loading…' : 'Change playlist'}
+                    </button>
+                    <a href={spotifyConnectUrl} className="text-sm text-dark-muted hover:text-dark-text">
+                      Reconnect Spotify
+                    </a>
+                  </div>
                   {showPlaylistPicker && playlistList.length > 0 && (
                     <ul className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-dark-border bg-dark-bg">
                       {playlistList.map((p) => (

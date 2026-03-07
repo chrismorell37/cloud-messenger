@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID
-const SPOTIFY_SCOPES = 'playlist-modify-private playlist-read-private'
+const SPOTIFY_SCOPES = 'playlist-modify-private playlist-modify-public playlist-read-private'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {

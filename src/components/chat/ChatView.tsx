@@ -100,7 +100,10 @@ export function ChatView({ onSignOut }: ChatViewProps) {
                 )}
               </div>
             ) : (
-              <div className="relative">
+              <div className="relative flex items-center gap-2">
+                <a href={spotifyConnectUrl} className="chat-header-btn text-dark-muted hover:text-dark-text text-sm">
+                  Reconnect Spotify
+                </a>
                 <button
                   type="button"
                   onClick={async () => {
