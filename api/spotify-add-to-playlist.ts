@@ -86,7 +86,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     const fallback =
       addRes.status === 403
-        ? "Can't add to this playlist. Check that it's your playlist and you have permission."
+        ? "Can't add to this playlist. Don't use Liked Songs—pick a playlist you created. If it's your own playlist, try reconnecting Spotify (Connect Spotify in the menu) to refresh permissions."
         : addRes.status === 404
           ? 'Playlist or track not found. Try choosing the playlist again from the menu.'
           : "Couldn't add to playlist. Check that you're connected, a playlist is selected, and the track is available."
