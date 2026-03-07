@@ -1,6 +1,8 @@
 import React, { useMemo, useCallback, useState, useRef, useEffect } from 'react'
 import { useChatStore, type ChatMessage } from '../../stores/chatStore'
 import { MediaContextMenu } from '../MediaContextMenu'
+import { getInstagramEmbedUrl, getInstagramContentType } from '../../lib/instagramExtension'
+import { useSpotifyStore, addTrackToSpotifyPlaylist } from '../../stores/spotifyStore'
 
 interface MessageBubbleProps {
   message: ChatMessage
@@ -322,20 +324,28 @@ export function MessageBubble({
         const embedUrl = spotifyUri.includes('spotify.com') 
           ? spotifyUri.replace('open.spotify.com', 'open.spotify.com/embed')
           : `https://open.spotify.com/embed/${spotifyUri.replace('spotify:', '').replace(/:/g, '/')}`
+        const isTrack = spotifyUri.includes('/track/') || spotifyUri.includes(':track:')
         return (
-          <SpotifyEmbed embedUrl={embedUrl} />
+          <div>
+            <SpotifyEmbed embedUrl={embedUrl} />
+            {isTrack && currentUser && (
+              <SpotifyAddToPlaylistButton spotifyUri={spotifyUri} appUserId={`chat_${currentUser.id}`} />
+            )}
+          </div>
         )
       }
       
       case 'instagram': {
         const instaUrl = message.content.attrs?.instagramUrl as string
         if (!instaUrl) return null
-        const embedInstaUrl = `${instaUrl}embed`
+        const embedInstaUrl = getInstagramEmbedUrl(instaUrl)
+        const instaContentType = getInstagramContentType(instaUrl)
+        const embedHeight = instaContentType === 'reel' ? 700 : 540
         return (
           <iframe
             src={embedInstaUrl}
             width="100%"
-            height="500"
+            height={embedHeight}
             frameBorder="0"
             scrolling="no"
             className="bubble-instagram rounded-lg"
@@ -560,6 +570,43 @@ function SpotifyEmbed({ embedUrl }: { embedUrl: string }) {
         allow="encrypted-media"
         className="bubble-spotify rounded-lg"
       />
+    </div>
+  )
+}
+
+function SpotifyAddToPlaylistButton({ spotifyUri, appUserId }: { spotifyUri: string; appUserId: string }) {
+  const { connected, playlistId, appUserId: storeAppUserId } = useSpotifyStore()
+  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+  const connectUrl = `/api/spotify-auth?app_user_id=${encodeURIComponent(appUserId)}`
+  const effectiveConnected = storeAppUserId === appUserId ? connected : false
+  const effectivePlaylistId = storeAppUserId === appUserId ? playlistId : null
+
+  const handleClick = useCallback(async () => {
+    if (!effectiveConnected) {
+      window.location.href = connectUrl
+      return
+    }
+    if (!effectivePlaylistId) {
+      alert('Choose a playlist first from the header.')
+      return
+    }
+    setStatus('loading')
+    const result = await addTrackToSpotifyPlaylist(appUserId, spotifyUri)
+    setStatus(result.ok ? 'done' : 'error')
+    if (!result.ok) alert(result.error ?? 'Failed to add to playlist')
+    setTimeout(() => setStatus('idle'), 2000)
+  }, [appUserId, spotifyUri, effectiveConnected, effectivePlaylistId, connectUrl])
+
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={status === 'loading'}
+        className="text-xs px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-white disabled:opacity-50 transition-colors"
+      >
+        {status === 'loading' ? 'Adding…' : status === 'done' ? 'Added' : 'Add to my playlist'}
+      </button>
     </div>
   )
 }

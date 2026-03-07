@@ -162,6 +162,17 @@ insert into public.notification_state (id, last_sent_at)
 values ('default', null)
 on conflict (id) do nothing;
 
+-- Spotify OAuth tokens per app user (backend only; use SUPABASE_SERVICE_ROLE_KEY in API)
+create table if not exists public.spotify_users (
+  app_user_id text primary key,
+  access_token text not null,
+  refresh_token text not null,
+  playlist_id text,
+  expires_at timestamptz not null,
+  updated_at timestamptz default now()
+);
+alter table public.spotify_users disable row level security;
+
 -- IMPORTANT: After running this script, add your two users to allowed_users:
 -- INSERT INTO public.allowed_users (email, display_name) VALUES ('user1@example.com', 'User 1');
 -- INSERT INTO public.allowed_users (email, display_name) VALUES ('user2@example.com', 'User 2');

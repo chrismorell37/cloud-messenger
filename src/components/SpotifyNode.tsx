@@ -1,8 +1,9 @@
 import { NodeViewWrapper } from '@tiptap/react'
 import type { NodeViewProps } from '@tiptap/react'
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { MediaWrapper, type Reply } from './MediaWrapper'
 import { useEditorStore } from '../stores/editorStore'
+import { useSpotifyStore, getSpotifyConnectUrl, addTrackToSpotifyPlaylist } from '../stores/spotifyStore'
 
 function getSpotifyEmbedUrl(spotifyUri: string): string {
   if (spotifyUri.startsWith('spotify:')) {
@@ -32,6 +33,8 @@ export function SpotifyNode({ node, updateAttributes, editor, getPos }: NodeView
   const embedUrl = getSpotifyEmbedUrl(spotifyUri || '')
   const contentType = getSpotifyContentType(spotifyUri || '')
   const embedHeight = contentType === 'playlist' || contentType === 'album' ? 352 : 80
+  const { appUserId, connected, playlistId } = useSpotifyStore()
+  const [addStatus, setAddStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
 
   const handleAddReaction = (emoji: string) => {
     const currentReactions = { ...reactions }
@@ -73,6 +76,23 @@ export function SpotifyNode({ node, updateAttributes, editor, getPos }: NodeView
     }
   }, [editor, getPos, node.nodeSize])
 
+  const handleAddToPlaylist = useCallback(async () => {
+    if (contentType !== 'track' || !spotifyUri) return
+    if (!connected) {
+      window.location.href = getSpotifyConnectUrl(appUserId)
+      return
+    }
+    if (!playlistId) {
+      alert('Choose a playlist first. Use the Spotify option in the menu.')
+      return
+    }
+    setAddStatus('loading')
+    const result = await addTrackToSpotifyPlaylist(appUserId, spotifyUri)
+    setAddStatus(result.ok ? 'done' : 'error')
+    if (!result.ok) alert(result.error ?? 'Failed to add to playlist')
+    setTimeout(() => setAddStatus('idle'), 2000)
+  }, [contentType, spotifyUri, connected, playlistId, appUserId])
+
   return (
     <NodeViewWrapper className="spotify-node-wrapper">
       <MediaWrapper
@@ -94,6 +114,23 @@ export function SpotifyNode({ node, updateAttributes, editor, getPos }: NodeView
             loading="lazy"
             style={{ borderRadius: '12px' }}
           />
+          {contentType === 'track' && (
+            <div className="mt-2 flex flex-col gap-1">
+              <button
+                type="button"
+                onClick={handleAddToPlaylist}
+                disabled={addStatus === 'loading'}
+                className="text-sm font-medium px-3 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white disabled:opacity-50 transition-colors w-fit"
+              >
+                {addStatus === 'loading' ? 'Adding…' : addStatus === 'done' ? 'Added' : 'Add to my playlist'}
+              </button>
+              {!connected && (
+                <p className="text-xs text-dark-muted">
+                  Connect Spotify and choose a playlist via + → Add Song (at the top of that panel).
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </MediaWrapper>
     </NodeViewWrapper>

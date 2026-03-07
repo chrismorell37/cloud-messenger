@@ -16,6 +16,7 @@ import { useAutosave } from '../hooks/useAutosave'
 import { useSupabaseRealtime, useMediaUpload } from '../hooks/useSupabase'
 import { usePresence } from '../hooks/usePresence'
 import { useDraftUpload } from '../hooks/useDraftUpload'
+import { useSpotify } from '../hooks/useSpotify'
 import { useEditorStore } from '../stores/editorStore'
 import PresenceCursors from './PresenceCursors'
 import { PhotoLightbox } from './PhotoLightbox'
@@ -91,7 +92,17 @@ export default function Editor() {
   const [linkUrl, setLinkUrl] = useState('')
   const [floatingButtonsTop, setFloatingButtonsTop] = useState(0)
   const [showDraftsMenu, setShowDraftsMenu] = useState(false)
+  const [showPlaylistPicker, setShowPlaylistPicker] = useState(false)
+  const [playlistList, setPlaylistList] = useState<Array<{ id: string; name: string; uri: string }>>([])
   const { isSaving, hasUnsavedChanges, lastSavedAt, otherUserPresence } = useEditorStore()
+  const {
+    connected: spotifyConnected,
+    needPlaylist: spotifyNeedPlaylist,
+    connectUrl: spotifyConnectUrl,
+    listPlaylists,
+    savePlaylist,
+    playlistsLoading,
+  } = useSpotify('editor')
   const { triggerSave, forceSave } = useAutosave()
   const { uploadMedia } = useMediaUpload()
   const { updateCursor, clearCursor, setRecordingStatus } = usePresence()
@@ -831,6 +842,58 @@ export default function Editor() {
                   <path d="m6 6 12 12"/>
                 </svg>
               </button>
+            </div>
+
+            {/* Spotify: Connect / Choose playlist — appears below "Add Song" title, above search */}
+            <div className="px-4 py-3 border-b border-dark-border bg-dark-bg/50">
+              <p className="text-sm font-medium text-dark-text mb-1">Add tracks to a playlist</p>
+              <p className="text-xs text-dark-muted mb-2">
+                Connect here and pick a playlist. Then use the green &quot;Add to my playlist&quot; button under each track (not the + inside the Spotify player).
+              </p>
+              {!spotifyConnected ? (
+                <a
+                  href={spotifyConnectUrl}
+                  className="inline-flex items-center gap-2 text-sm font-medium text-green-500 hover:text-green-400"
+                >
+                  Connect Spotify
+                </a>
+              ) : spotifyNeedPlaylist ? (
+                <div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setShowPlaylistPicker(true)
+                      const list = await listPlaylists()
+                      setPlaylistList(list)
+                    }}
+                    disabled={playlistsLoading}
+                    className="text-sm text-green-500 hover:text-green-400 disabled:opacity-50"
+                  >
+                    {playlistsLoading ? 'Loading…' : 'Choose playlist'}
+                  </button>
+                  {showPlaylistPicker && playlistList.length > 0 && (
+                    <ul className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-dark-border bg-dark-bg">
+                      {playlistList.map((p) => (
+                        <li key={p.id}>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              await savePlaylist(p.id)
+                              setShowPlaylistPicker(false)
+                              setPlaylistList([])
+                            }}
+                            className="w-full px-3 py-2 text-left text-sm text-dark-text hover:bg-dark-border/50"
+                          >
+                            {p.name}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ) : (
+                <span className="text-sm text-dark-muted">Connected. Use “Add to my playlist” on any track.</span>
+              )}
             </div>
 
             {/* Search input */}
