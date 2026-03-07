@@ -69,12 +69,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   )
 
   if (!addRes.ok) {
-    const err = await addRes.text()
-    console.error('Spotify add tracks failed:', addRes.status, err)
+    const errText = await addRes.text()
+    console.error('Spotify add tracks failed:', addRes.status, errText)
     if (addRes.status === 401) {
       return res.status(401).json({ error: 'Spotify session expired. Connect again.' })
     }
-    return res.status(addRes.status).json({ error: 'Failed to add to playlist' })
+    let spotifyMessage: string | null = null
+    try {
+      const errJson = JSON.parse(errText) as {
+        error?: { message?: string; status?: number }; message?: string; [k: string]: unknown
+      }
+      spotifyMessage =
+        errJson?.error?.message ?? errJson?.message ?? (typeof errJson === 'string' ? errJson : null)
+    } catch {
+      // ignore parse failure
+    }
+    const fallback =
+      addRes.status === 403
+        ? "Can't add to this playlist. Check that it's your playlist and you have permission."
+        : addRes.status === 404
+          ? 'Playlist or track not found. Try choosing the playlist again from the menu.'
+          : "Couldn't add to playlist. Check that you're connected, a playlist is selected, and the track is available."
+    return res
+      .status(addRes.status)
+      .json({ error: spotifyMessage || fallback })
   }
 
   return res.status(200).json({ ok: true })
@@ -136,8 +154,9 @@ async function updateTokens(appUserId: string, accessToken: string, expiresAt: s
 
 function normalizeTrackUri(input: string): string | null {
   const trimmed = input.trim()
-  if (/^spotify:track:[a-zA-Z0-9]+$/.test(trimmed)) return trimmed
-  const m = trimmed.match(/open\.spotify\.com\/track\/([a-zA-Z0-9]+)/)
+  // Spotify track IDs are alphanumeric, may include hyphen/underscore
+  if (/^spotify:track:[a-zA-Z0-9_-]+$/.test(trimmed)) return trimmed
+  const m = trimmed.match(/open\.spotify\.com\/track\/([a-zA-Z0-9_-]+)/)
   if (m) return `spotify:track:${m[1]}`
   return null
 }

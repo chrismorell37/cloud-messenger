@@ -89,7 +89,7 @@ export function SpotifyNode({ node, updateAttributes, editor, getPos }: NodeView
     setAddStatus('loading')
     const result = await addTrackToSpotifyPlaylist(appUserId, spotifyUri)
     setAddStatus(result.ok ? 'done' : 'error')
-    if (!result.ok) alert(result.error ?? 'Failed to add to playlist')
+    if (!result.ok) alert(result.error ?? 'Something went wrong. Try again or connect/choose playlist in the menu.')
     setTimeout(() => setAddStatus('idle'), 2000)
   }, [contentType, spotifyUri, connected, playlistId, appUserId])
 

@@ -64,7 +64,8 @@ export async function addTrackToSpotifyPlaylist(
   })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
-    return { ok: false, error: (data.error as string) || 'Failed to add to playlist' }
+    const message = (data.error as string) || 'Something went wrong. Try again or connect/choose playlist in the header.'
+    return { ok: false, error: message }
   }
   return { ok: true }
 }

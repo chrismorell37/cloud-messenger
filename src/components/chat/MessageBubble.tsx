@@ -593,7 +593,14 @@ function SpotifyAddToPlaylistButton({ spotifyUri, appUserId }: { spotifyUri: str
     setStatus('loading')
     const result = await addTrackToSpotifyPlaylist(appUserId, spotifyUri)
     setStatus(result.ok ? 'done' : 'error')
-    if (!result.ok) alert(result.error ?? 'Failed to add to playlist')
+    if (!result.ok) {
+      const msg = result.error ?? 'Something went wrong. Try again or connect/choose playlist in the header.'
+      const hint =
+        msg.includes('Spotify not connected') || msg.includes('No playlist selected')
+          ? ' Use Connect Spotify and Choose playlist in the header above.'
+          : ''
+      alert(msg + hint)
+    }
     setTimeout(() => setStatus('idle'), 2000)
   }, [appUserId, spotifyUri, effectiveConnected, effectivePlaylistId, connectUrl])
 
